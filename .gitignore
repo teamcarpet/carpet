@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# Vite cache
+.vite/
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code internal
+.claude/
+.claude-flow/
+.mcp.json
+
+# Logs
+*.log
+npm-debug.log*
