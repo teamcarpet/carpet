@@ -15,6 +15,12 @@ import {
 } from './platform.js';
 import { startLive, stopLive, joinLive, sendChatMessage, onChatMessage } from './live.js';
 import { CONFIG } from './config.js';
+import {
+     renderProfile, openEditProfile, closeEditProfile,
+     uploadProfileAvatar, uploadProfileBanner,
+     saveProfile as saveProfileFn, shareProfile,
+     initProfile,
+   } from './profile.js';
 
 // ── Globals ──────────────────────────────────────────────────────────────────
 let curTk = null, tmode = 'buy';
@@ -112,8 +118,9 @@ export function setView(v) {
   if (v === 'home') setTimeout(updCrs, 60);
   if (v === 'bubble') setTimeout(renderBvMap, 50);
   if (v === 'rewards') renderRewards();
+  if (v === 'profile') renderProfile();
 }
-export function goProfile() { setView('profile'); closeWMenu(); pfTab(document.querySelector('.pf-tab.on'), 'balances'); }
+export function goProfile() { setView('profile'); closeWMenu(); }
 
 // ── Ticker ───────────────────────────────────────────────────────────────────
 export function refreshTicker() {
@@ -794,11 +801,18 @@ export function init() {
     pfTab,
     cMove, setColSort, filterSearch,
     showN,
+    renderProfile, openEditProfile, closeEditProfile,
+    uploadProfileAvatar, uploadProfileBanner,
+    saveProfile: saveProfileFn, shareProfile,
   };
 
   // Expose as globals so existing onclick="fn()" HTML attributes work
   Object.entries(window._app).forEach(([k, v]) => { window[k] = v; });
+  // Legacy alias used in static HTML
+  window.copyAddr = window.copyAddrUI;
 
+   initProfile(); 
+   
   // Auto-reconnect if previously connected
   const provider = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
   if (provider) {

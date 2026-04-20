@@ -837,11 +837,11 @@ body.sb-open #main{margin-left:180px}
         <div class="rw-sec-meta">Buyback amount scales with tier</div>
       </div>
       <div class="rw-milestones">
-        <div class="rw-ms"><div class="rw-ms-tier">T1</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">100 SOL</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">1 SOL</div><div class="rw-ms-sub">burned</div></div>
-        <div class="rw-ms"><div class="rw-ms-tier">T2</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">500 SOL</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">5 SOL</div><div class="rw-ms-sub">burned</div></div>
-        <div class="rw-ms"><div class="rw-ms-tier">T3</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">1,000 SOL</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">10 SOL</div><div class="rw-ms-sub">burned</div></div>
-        <div class="rw-ms"><div class="rw-ms-tier">T4</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">5,000 SOL</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">25 SOL</div><div class="rw-ms-sub">burned</div></div>
-        <div class="rw-ms"><div class="rw-ms-tier">T5</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">25K SOL</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">100 SOL</div><div class="rw-ms-sub">burned</div></div>
+        <div class="rw-ms"><div class="rw-ms-tier">T1</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">50.000$</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">1 SOL</div><div class="rw-ms-sub">burned</div></div>
+        <div class="rw-ms"><div class="rw-ms-tier">T2</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">100.000$</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">5 SOL</div><div class="rw-ms-sub">burned</div></div>
+        <div class="rw-ms"><div class="rw-ms-tier">T3</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">300.000$</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">10 SOL</div><div class="rw-ms-sub">burned</div></div>
+        <div class="rw-ms"><div class="rw-ms-tier">T4</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">500.000$</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">25 SOL</div><div class="rw-ms-sub">burned</div></div>
+        <div class="rw-ms"><div class="rw-ms-tier">T5</div><div class="rw-ms-l">Volume</div><div class="rw-ms-vol">1.000.000$</div><div class="rw-ms-arr">→ BUYBACK</div><div class="rw-ms-reward">100 SOL</div><div class="rw-ms-sub">burned</div></div>
       </div>
     </div>
 
@@ -876,38 +876,7 @@ body.sb-open #main{margin-left:180px}
   </div>
 
   <!-- PROFILE VIEW -->
-  <div id="profile-view" style="padding-bottom:40px;">
-    <div style="height:140px;background:radial-gradient(ellipse at 30% 50%,rgba(255,45,45,.25),transparent 60%),var(--bg-3);position:relative;overflow:hidden;border-bottom:1px solid var(--line);">
-      <div style="position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:32px 32px;opacity:.6;"></div>
-    </div>
-    <div style="padding:0 24px;display:flex;align-items:flex-end;justify-content:space-between;margin-top:-36px;margin-bottom:16px;position:relative;z-index:2;">
-      <div style="position:relative;">
-        <div style="width:72px;height:72px;border-radius:12px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid var(--bg-2);box-shadow:0 0 24px var(--red-glow);">🎭</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" onclick="showN('Link copied')"><iconify-icon icon="solar:share-bold" style="font-size:13px;"></iconify-icon> Share</button>
-        <button class="btn btn-primary btn-sm" onclick="showN('Edit profile')"><iconify-icon icon="solar:pen-bold" style="font-size:13px;"></iconify-icon> Edit</button>
-      </div>
-    </div>
-    <div style="padding:0 24px 18px;border-bottom:1px solid var(--line);">
-      <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;">NEONORACLE</div>
-      <div style="display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text);background:var(--surface);border:1px solid var(--line);padding:6px 12px;border-radius:5px;cursor:pointer;margin-bottom:12px;letter-spacing:.5px;" onclick="copyAddr()">C9hyr...vcyp <iconify-icon icon="solar:copy-bold" style="font-size:11px;opacity:.6;"></iconify-icon></div>
-      <div style="font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;max-width:600px;margin-bottom:14px;letter-spacing:.3px;">Builder on Carpet. Launched 3 tokens, 2 graduated to Raydium. Diamond hands only.</div>
-      <div style="display:flex;gap:26px;">
-        <div><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);">142</div><div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;text-transform:uppercase;">Followers</div></div>
-        <div><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);">38</div><div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;text-transform:uppercase;">Following</div></div>
-        <div><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red);">3</div><div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;text-transform:uppercase;">Created</div></div>
-        <div><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--up);">+$24.8K</div><div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:1.5px;margin-top:3px;text-transform:uppercase;">PnL</div></div>
-      </div>
-    </div>
-    <div style="display:flex;padding:0 24px;border-bottom:1px solid var(--line);margin-bottom:18px;gap:0;">
-      <div class="pf-tab on" onclick="pfTab(this,'balances')">Balances</div>
-      <div class="pf-tab" onclick="pfTab(this,'created')">Created</div>
-      <div class="pf-tab" onclick="pfTab(this,'activity')">Activity</div>
-      <div class="pf-tab" onclick="pfTab(this,'rewards')">Rewards</div>
-    </div>
-    <div id="pf-content" style="padding:0 24px;"></div>
-  </div>
+  <div id="profile-view" style="display:none;flex-direction:column;padding-bottom:40px;"></div>
 
 </div><!-- #main -->
 </div><!-- #shell -->
@@ -1520,5 +1489,61 @@ setInterval(()=>{if(fi>=FN.length)return;const p=(Math.random()*60+5).toFixed(1)
 // INIT (dead code — replaced by src/main.js)
 }//end if(false)
 </script>
+<!-- EDIT PROFILE MODAL -->
+<div class="ov" id="epf-modal">
+  <div class="modal" style="width:540px;max-width:95vw;">
+    <div class="mhdr">
+      <div class="mhdr-t"><iconify-icon icon="solar:pen-bold" style="font-size:15px;"></iconify-icon> Edit Profile</div>
+      <button class="mcls" onclick="_app.closeEditProfile()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button>
+    </div>
+    <div class="mbdy">
+ 
+      <label class="fl" style="margin-bottom:6px;display:block;">Banner</label>
+      <div id="epf-banner-preview"
+           style="height:110px;border-radius:8px;border:1px solid var(--line);margin-bottom:14px;position:relative;overflow:hidden;cursor:pointer;"
+           onclick="document.getElementById('epf-banner-file').click()">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);opacity:0;transition:opacity .15s;"
+             onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">
+          <div style="display:flex;align-items:center;gap:8px;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.5px;">
+            <iconify-icon icon="solar:camera-bold" style="font-size:18px;"></iconify-icon> CHANGE BANNER
+          </div>
+        </div>
+      </div>
+      <input type="file" id="epf-banner-file" accept="image/*" style="display:none;" onchange="_app.uploadProfileBanner(this)">
+ 
+      <label class="fl" style="margin-bottom:6px;display:block;">Avatar</label>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+        <div id="epf-avatar-preview"
+             style="width:72px;height:72px;border-radius:12px;background:var(--red);display:flex;align-items:center;justify-content:center;border:3px solid var(--bg-2);box-shadow:0 0 18px var(--red-glow);overflow:hidden;flex-shrink:0;cursor:pointer;"
+             onclick="document.getElementById('epf-avatar-file').click()"></div>
+        <div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('epf-avatar-file').click()">
+            <iconify-icon icon="solar:camera-bold" style="font-size:13px;"></iconify-icon> Upload Image
+          </button>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.5px;margin-top:4px;">Max 2MB · PNG / JPG / GIF</div>
+        </div>
+      </div>
+      <input type="file" id="epf-avatar-file" accept="image/*" style="display:none;" onchange="_app.uploadProfileAvatar(this)">
+ 
+      <div class="ff">
+        <label class="fl">Username</label>
+        <input class="fi" id="epf-username" placeholder="your name" maxlength="24">
+      </div>
+ 
+      <div class="ff">
+        <label class="fl">Bio</label>
+        <textarea class="fta" id="epf-bio" placeholder="Tell your story..." maxlength="280" rows="3"></textarea>
+        <div class="fhnt">Max 280 characters</div>
+      </div>
+ 
+      <div class="mft">
+        <button class="btn btn-ghost" onclick="_app.closeEditProfile()">Cancel</button>
+        <button class="btn btn-primary" onclick="_app.saveProfile()">
+          <iconify-icon icon="solar:diskette-bold" style="font-size:12px;"></iconify-icon> Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
