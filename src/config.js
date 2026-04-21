@@ -1,5 +1,5 @@
 export const CONFIG = {
-  solanaRpc: import.meta.env.VITE_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+  solanaRpc: import.meta.env.VITE_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
   pinataJwt: import.meta.env.VITE_PINATA_JWT || '',
   pinataGateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud',
   livekitUrl: import.meta.env.VITE_LIVEKIT_URL || '',
@@ -9,6 +9,12 @@ export const CONFIG = {
   platformName: import.meta.env.VITE_PLATFORM_NAME || 'CARPET',
   platformFeeBps: Number(import.meta.env.VITE_PLATFORM_FEE_BPS) || 100,
   feeWallet: import.meta.env.VITE_FEE_WALLET || '',
+
+  // Launchpad program
+  LAUNCHPAD: {
+    programId: import.meta.env.VITE_LAUNCHPAD_PROGRAM_ID || 'CtQZ1K5vxoYDZoPgEubC8fM7KnjJuxe2CJyFMgo5wd7X',
+    cluster: import.meta.env.VITE_LAUNCHPAD_CLUSTER || 'devnet',
+  },
 
   // Well-known Solana token mints
   MINTS: {

@@ -3,6 +3,8 @@ import {
   getPublicKey, getBalance, getShortAddress,
   copyAddress, refreshBalance, onWalletChange,
 } from './wallet.js';
+import { buyTokens, sellTokens } from './launchpad.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   getQuote, executeSwap, searchTokens, getTokenInfo,
   formatAmount, toRawAmount,
@@ -21,6 +23,7 @@ import {
      saveProfile as saveProfileFn, shareProfile,
      initProfile,
    } from './profile.js';
+   
 
 // ── Globals ──────────────────────────────────────────────────────────────────
 let curTk = null, tmode = 'buy';
@@ -311,7 +314,34 @@ export async function doTrade() {
   const btn = document.getElementById('tbtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
   try {
-    if (curTk?.mint) {
+    if (!curTk?.mint) {
+      showN('Token not yet on-chain');
+      return;
+    }
+
+    // Use our launchpad for bonding-mode tokens, Jupiter for others
+    const useLaunchpad = curTk.mode === 'bonding' && curTk.poolSig;
+
+    if (useLaunchpad) {
+      const provider = window.phantom?.solana || window.solana;
+      const wallet = {
+        publicKey: getPublicKey(),
+        signTransaction: (tx) => provider.signTransaction(tx),
+        signAllTransactions: (txs) => provider.signAllTransactions(txs),
+      };
+
+      let sig;
+      if (tmode === 'buy') {
+        const lamports = Math.floor(parseFloat(a) * LAMPORTS_PER_SOL);
+        sig = await buyTokens(wallet, curTk.mint, lamports);
+      } else {
+        const decimals = curTk.decimals || 6;
+        const tokenAmount = Math.floor(parseFloat(a) * Math.pow(10, decimals));
+        sig = await sellTokens(wallet, curTk.mint, tokenAmount);
+      }
+      showN(`✓ ${tmode === 'buy' ? 'Bought' : 'Sold'} $${curTk.tk} via launchpad · ${sig.slice(0, 8)}...`);
+    } else {
+      // Fallback to Jupiter for non-launchpad tokens
       const inputMint = tmode === 'buy' ? CONFIG.MINTS.SOL : curTk.mint;
       const outputMint = tmode === 'buy' ? curTk.mint : CONFIG.MINTS.SOL;
       const decimals = tmode === 'buy' ? 9 : (curTk.decimals || 6);
@@ -319,10 +349,9 @@ export async function doTrade() {
       const quote = await getQuote({ inputMint, outputMint, amount });
       const sig = await executeSwap(quote);
       showN(`✓ ${tmode === 'buy' ? 'Bought' : 'Sold'} $${curTk.tk} · ${sig.slice(0, 8)}...`);
-      await refreshBalance();
-    } else {
-      showN(`${tmode === 'buy' ? 'Buying' : 'Selling'} ${a} ${tmode === 'buy' ? 'SOL → $' + curTk.tk : '$' + curTk.tk + ' → SOL'} (on-chain tx coming soon)`);
     }
+
+    await refreshBalance();
   } catch (err) {
     showN('Trade failed: ' + err.message);
   } finally {
@@ -464,7 +493,7 @@ export async function doSwap() {
 // ── Launch Modal ──────────────────────────────────────────────────────────────
 function showOnly(...ids) {
   ['llobby', 'lfa', 'lprev', 'lsuccess'].forEach(id => document.getElementById(id).style.display = 'none');
-  ids.forEach(id => document.getElementById(id).style.display = '');
+ ids.forEach(id => document.getElementById(id).style.display = 'block');
 }
 function stepUI(a) { for (let i = 1; i <= 4; i++) { const el = document.getElementById('s' + i); el.classList.toggle('on', i === a); el.classList.toggle('done', i < a); } }
 export function openLaunch() { document.getElementById('lm').classList.add('open'); goStep1(); }

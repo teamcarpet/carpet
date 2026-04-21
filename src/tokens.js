@@ -13,6 +13,7 @@ import { CONFIG } from './config.js';
 import { getPublicKey, signAndSendTransaction } from './wallet.js';
 import { uploadTokenMetadata } from './ipfs.js';
 import { addToken } from './platform.js';
+import { createBondingPool, getProgram } from './launchpad.js';
 
 export async function createToken({
   name, symbol, description,
@@ -88,6 +89,24 @@ export async function createToken({
     console.warn('Metaplex metadata upload skipped:', e.message);
   }
 
+  // 5.5. Create bonding pool on launchpad if mode is bonding
+  let poolSig = null;
+  if (mode === 'bonding') {
+    try {
+      const provider = window.phantom?.solana || window.solana;
+      const wallet = {
+        publicKey: creator,
+        signTransaction: (tx) => provider.signTransaction(tx),
+        signAllTransactions: (txs) => provider.signAllTransactions(txs),
+      };
+      poolSig = await createBondingPool(wallet, mintKp.publicKey);
+      console.log('Bonding pool created:', poolSig);
+    } catch (e) {
+      console.error('Failed to create bonding pool:', e);
+      throw new Error('Pool creation failed: ' + e.message);
+    }
+  }
+
   // 6. Register on platform
   const tokenEntry = addToken({
     n: name,
@@ -106,6 +125,9 @@ export async function createToken({
     sig,
     decimals,
     supply,
+    sig,
+    poolSig,
+    decimals,
   });
 
   return { mint: mintKp.publicKey.toBase58(), sig, token: tokenEntry };
