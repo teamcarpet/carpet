@@ -19,7 +19,7 @@ const CACHE_DB_NAME    = 'carpet_bubble_cache';
 const CACHE_STORE_NAME = 'bubbles';
 const CACHE_TTL_MS     = 5 * 60 * 1000;
 const MAX_HOLDERS      = 50;
-const MAX_SIGNATURES   = 200;
+const MAX_SIGNATURES   = 25;
 
 // ── IndexedDB cache ─────────────────────────────────────────────────────────
 
@@ -93,7 +93,13 @@ async function rpcBatch(calls) {
   });
   if (!res.ok) throw new Error(`RPC batch HTTP ${res.status}`);
   const json = await res.json();
-  return json.map(x => x.error ? null : x.result);
+  
+  // Сортируем по id чтобы порядок совпадал с calls[]
+  const sorted = new Array(calls.length).fill(null);
+  for (const item of json) {
+    if (item.id != null) sorted[item.id] = item.error ? null : item.result;
+  }
+  return sorted;
 }
 
 // ── Primary fetch steps ─────────────────────────────────────────────────────
@@ -110,18 +116,20 @@ async function fetchTopHolders(mint) {
 }
 
 async function fetchAccountOwners(tokenAccounts) {
-  // For each token account, resolve the owner wallet via parsed getAccountInfo.
   if (!tokenAccounts.length) return new Map();
-  const calls = tokenAccounts.map(ta => ({
-    method: 'getAccountInfo',
-    params: [ta, { encoding: 'jsonParsed', commitment: 'confirmed' }],
-  }));
-  const results = await rpcBatch(calls);
   const map = new Map();
-  results.forEach((r, i) => {
-    const owner = r?.value?.data?.parsed?.info?.owner || null;
-    map.set(tokenAccounts[i], owner);
-  });
+  for (let i = 0; i < tokenAccounts.length; i += 20) {  // chunk 20
+    const chunk = tokenAccounts.slice(i, i + 20);
+    const calls = chunk.map(ta => ({
+      method: 'getAccountInfo',
+      params: [ta, { encoding: 'jsonParsed', commitment: 'confirmed' }],
+    }));
+    const results = await rpcBatch(calls);
+    results.forEach((r, j) => {
+      const owner = r?.value?.data?.parsed?.info?.owner || null;
+      map.set(chunk[j], owner);
+    });
+  }
   return map;
 }
 
@@ -132,18 +140,22 @@ async function fetchSignatures(address, limit = MAX_SIGNATURES) {
 
 async function fetchParsedTxs(signatures) {
   if (!signatures.length) return [];
-  // getParsedTransactions supports batching up to 1000 sigs in practice; chunk 100.
   const chunks = [];
-  for (let i = 0; i < signatures.length; i += 100) chunks.push(signatures.slice(i, i + 100));
+  for (let i = 0; i < signatures.length; i += 10) chunks.push(signatures.slice(i, i + 10));
   const all = [];
   for (const chunk of chunks) {
-    const result = await rpc('getParsedTransactions', [
-      chunk,
-      { maxSupportedTransactionVersion: 0, commitment: 'confirmed' },
-    ]);
-    all.push(...(result || []));
+    const calls = chunk.map(sig => ({
+      method: 'getTransaction',
+      params: [sig, {
+        encoding: 'jsonParsed',
+        maxSupportedTransactionVersion: 0,
+        commitment: 'confirmed',
+      }],
+    }));
+    const results = await rpcBatch(calls);
+    all.push(...results.filter(Boolean));
   }
-  return all.filter(Boolean);
+  return all;
 }
 
 // Extract SPL transfer edges of the given mint from parsed txs.
@@ -202,17 +214,13 @@ function extractTransfers(parsedTxs, mint) {
 // Resolve any token-account addresses in edges to their owner wallets.
 async function resolveOwners(edges) {
   const tokenAccounts = new Set();
-  for (const e of edges) {
-    // from is usually authority (already a wallet); to is a token account.
-    tokenAccounts.add(e.to);
-  }
+  for (const e of edges) tokenAccounts.add(e.to);
   const arr = [...tokenAccounts];
   if (!arr.length) return edges;
 
-  // Batch in groups of 100 to stay well inside any Helius single-request size cap.
   const map = new Map();
-  for (let i = 0; i < arr.length; i += 100) {
-    const chunk = arr.slice(i, i + 100);
+  for (let i = 0; i < arr.length; i += 50) {  // было 100
+    const chunk = arr.slice(i, i + 50);
     const calls = chunk.map(ta => ({
       method: 'getAccountInfo',
       params: [ta, { encoding: 'jsonParsed', commitment: 'confirmed' }],
@@ -223,7 +231,6 @@ async function resolveOwners(edges) {
       map.set(chunk[j], owner);
     });
   }
-
   return edges.map(e => ({ ...e, to: map.get(e.to) || e.to }));
 }
 

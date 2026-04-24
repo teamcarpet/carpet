@@ -6,6 +6,7 @@
 
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3-zoom@3/+esm';
 import { select } from 'https://cdn.jsdelivr.net/npm/d3-selection@3/+esm';
+import 'https://cdn.jsdelivr.net/npm/d3-transition@3/+esm'; 
 
 export function attachZoom(canvas, renderer) {
   const zoom = d3.zoom()
