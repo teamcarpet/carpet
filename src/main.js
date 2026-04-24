@@ -12,10 +12,8 @@ import {
 import { uploadFileToPinata, uploadTokenMetadata } from './ipfs.js';
 import {
   getTokens, getToken, addToken, updateToken, deleteToken,
-  getTickerTokens, getLives, addLive, getActiveLives,
-  getRewards, addReward,
+  getTickerTokens,
 } from './platform.js';
-import { startLive, stopLive, joinLive, sendChatMessage, onChatMessage } from './live.js';
 import { CONFIG } from './config.js';
 import {
      renderProfile, openEditProfile, closeEditProfile,
@@ -23,6 +21,8 @@ import {
      saveProfile as saveProfileFn, shareProfile,
      initProfile,
    } from './profile.js';
+
+import { mountBubbleView, unmountBubbleView } from './bubble/bubble.js';
    
 
 // ── Globals ──────────────────────────────────────────────────────────────────
@@ -31,13 +31,9 @@ let sbOpen = false;
 let ci = 0; const CV = 3;
 const colSort = { new: 'date', bonding: 'prog', migrated: 'date' };
 let searchQ = '';
-let bvActive = null, bvFilter = '';
-let activeRoom = null;
-let currentLiveId = null;
 let swapTokenIn = null, swapTokenOut = null;
 let swapQuote = null;
 let imageFileGlobal = null;
-let bannerFileGlobal = null;
 let selM = null, fData = {};
 
 // ── Formatters ───────────────────────────────────────────────────────────────
@@ -111,16 +107,20 @@ export function toggleSb() {
 
 // ── Views ────────────────────────────────────────────────────────────────────
 export function setView(v) {
-  ['home', 'bubble', 'rewards', 'live', 'profile'].forEach(id => {
+  ['home', 'bubble', 'profile'].forEach(id => {
     const el = document.getElementById(id + '-view');
     if (el) el.style.display = id === v ? 'flex' : 'none';
     const sbi = document.getElementById('si-' + id);
     if (sbi) sbi.classList.toggle('on', id === v);
   });
-  if (v === 'live') buildLive();
   if (v === 'home') setTimeout(updCrs, 60);
-  if (v === 'bubble') setTimeout(renderBvMap, 50);
-  if (v === 'rewards') renderRewards();
+   if (v === 'bubble') {
+    mountBubbleView(document.getElementById('bubble-view'));
+  } else {
+    // Only unmount if we're actually leaving bubble
+    const bv = document.getElementById('bubble-view');
+    if (bv && bv.classList.contains('bm-root')) unmountBubbleView();
+  }
   if (v === 'profile') renderProfile();
 }
 export function goProfile() { setView('profile'); closeWMenu(); }
@@ -220,8 +220,6 @@ export function renderAll() {
   const all = getTokens();
   const tc = document.getElementById('hdr-token-count');
   if (tc) tc.textContent = all.length;
-  const lc = document.getElementById('hdr-live-count');
-  if (lc) lc.textContent = getActiveLives().length;
 }
 export function setColSort(btn) {
   const col = btn.dataset.col;
@@ -539,8 +537,6 @@ export async function doLaunch() {
     stepUI(4); showOnly('lsuccess');
     document.getElementById('suc-sub').textContent = `// $${fData.tick} is live · ${result.mint.slice(0, 8)}...`;
     document.getElementById('suc-sig').href = `https://solscan.io/tx/${result.sig}`;
-    const wantLive = document.getElementById('f-start-live')?.checked;
-    if (wantLive) setTimeout(() => openLiveStream(result.token), 1500);
     renderAll(); refreshTicker();
   } catch (err) {
     showN('Launch failed: ' + err.message); console.error(err);
@@ -580,42 +576,6 @@ function buildForm(mode) {
     <div class="frow">
       <div class="ff"><label class="fl">Twitter</label><input class="fi" id="f-twt" placeholder="@handle"></div>
       <div class="ff"><label class="fl">Telegram</label><input class="fi" id="f-tg" placeholder="t.me/..."></div>
-    </div>
-    <div class="fstit">Options</div>
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:6px;cursor:pointer;margin-bottom:10px;" onclick="document.getElementById('f-start-live').click()">
-      <input type="checkbox" id="f-start-live" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer;">
-      <div>
-        <div style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);">Start Live Stream after launch</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;">Begin a live stream immediately after token creation</div>
-      </div>
-    </div>
-    <!-- Banner section -->
-    <div class="ban-toggle" onclick="window._app.toggleBan()" id="ban-tog">
-      <div class="ban-l">
-        <iconify-icon icon="solar:gallery-bold" style="font-size:18px;color:var(--amber);"></iconify-icon>
-        <div>
-          <div class="ban-title">Add Banner</div>
-          <div class="ban-sub">Promote your token with a featured banner</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);">0.2 SOL</div>
-        <iconify-icon icon="solar:arrow-down-bold" id="ban-arr" style="font-size:14px;color:var(--muted);"></iconify-icon>
-      </div>
-    </div>
-    <div class="ban-body" id="ban-body">
-      <div class="ban-drop" onclick="document.getElementById('f-ban').click()">
-        <iconify-icon icon="solar:gallery-add-bold" style="font-size:28px;color:var(--red);"></iconify-icon>
-        <div class="ban-drop-t">Upload Banner Image</div>
-        <div class="ban-drop-h">PNG, JPG or GIF · Recommended 1200×400px · Max 5MB</div>
-        <input type="file" id="f-ban" accept="image/*" style="display:none;" onchange="window._app.previewBanner(this)">
-      </div>
-      <div id="ban-preview" style="display:none;margin-top:8px;"><img id="ban-prev-el" style="width:100%;border-radius:6px;object-fit:cover;max-height:120px;" alt="banner"></div>
-      <div style="margin-top:10px;padding:10px 14px;background:var(--amber-soft);border:1px solid var(--amber-bdr);border-radius:6px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--amber);">Banner placement fee</div>
-        <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--amber);">0.2 SOL</div>
-      </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="window._app.payBanner()"><iconify-icon icon="solar:wallet-bold" style="font-size:12px;"></iconify-icon> Confirm Banner — 0.2 SOL</button>
     </div>`;
 }
 
@@ -626,159 +586,7 @@ export function previewImage(input) {
   document.getElementById('img-preview').style.display = 'block';
   document.getElementById('img-label-txt').textContent = file.name;
 }
-export function previewBanner(input) {
-  const file = input.files[0]; if (!file) return;
-  bannerFileGlobal = file;
-  const url = URL.createObjectURL(file);
-  document.getElementById('ban-prev-el').src = url;
-  document.getElementById('ban-preview').style.display = 'block';
-}
-export function toggleBan() {
-  const body = document.getElementById('ban-body'), arr = document.getElementById('ban-arr');
-  body.classList.toggle('open');
-  arr.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
-}
-export async function payBanner() {
-  if (!isConnected()) { showN('Connect wallet to add banner'); return; }
-  if (!bannerFileGlobal) { showN('Upload a banner image first'); return; }
-  showN('Banner payment: coming soon. UI ready, payment integration TBD.');
-}
 
-// ── Live View ─────────────────────────────────────────────────────────────────
-export function buildLive() {
-  const lives = getActiveLives();
-  const lc = l => {
-    const age = l.startedAt ? fAge(l.startedAt) : '';
-    return `<div onclick="window._app.openLiveRoom('${l.id}')" style="background:var(--bg-3);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:58px;cursor:pointer;transition:all .2s;" onmouseenter="this.style.borderColor='var(--red)';this.style.boxShadow='0 0 16px var(--red-glow)'" onmouseleave="this.style.borderColor='var(--line)';this.style.boxShadow='none'">
-      🎥
-      <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(5,8,14,.92));display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;">
-        <div style="position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;background:var(--red);color:#fff;padding:4px 9px;border-radius:4px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;"><div style="width:5px;height:5px;border-radius:50%;background:#fff;animation:pulse 1.2s ease-in-out infinite;"></div>Live</div>
-        <div style="position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:10px;background:var(--bg-2);border:1px solid var(--line);padding:3px 8px;border-radius:4px;color:var(--text);font-weight:600;display:flex;align-items:center;gap:4px;"><iconify-icon icon="solar:eye-bold" style="font-size:10px;"></iconify-icon> ${l.viewers || 0}</div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);letter-spacing:.3px;">${l.tokenName || 'Untitled Stream'}</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;">$${l.tokenTicker || '???'} · ${l.creatorShort || ''} · ${age}</div>
-      </div>
-    </div>`;
-  };
-  const topEl = document.getElementById('top-lives');
-  const gridEl = document.getElementById('live-grid');
-  if (!lives.length) {
-    const empty = '<div style="padding:32px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);grid-column:1/-1;">No active streams. Launch a token and start a live!</div>';
-    if (topEl) topEl.innerHTML = empty;
-    if (gridEl) gridEl.innerHTML = '';
-    return;
-  }
-  const sorted = [...lives].sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
-  if (topEl) topEl.innerHTML = sorted.slice(0, 3).map(lc).join('');
-  if (gridEl) gridEl.innerHTML = sorted.map(lc).join('');
-}
-
-export async function openLiveRoom(liveId) {
-  const lives = getLives();
-  const live = lives.find(l => l.id == liveId);
-  if (!live) return;
-  document.getElementById('live-room-modal').classList.add('open');
-  document.getElementById('lr-token').textContent = '$' + (live.tokenTicker || '???');
-  document.getElementById('lr-name').textContent = live.tokenName || 'Stream';
-  const video = document.getElementById('lr-video');
-  try {
-    const ident = isConnected() ? getPublicKey().toBase58() : 'viewer-' + Date.now();
-    const room = await joinLive(live.roomName, video, ident);
-    onChatMessage(msg => appendLiveChat(msg));
-    window._liveRoom = room;
-  } catch (e) {
-    showN('Could not join stream: ' + e.message);
-  }
-}
-export function closeLiveRoom() {
-  if (window._liveRoom) { window._liveRoom.disconnect(); window._liveRoom = null; }
-  document.getElementById('live-room-modal').classList.remove('open');
-}
-export async function sendLiveChat() {
-  const inp = document.getElementById('lr-chat-inp');
-  const v = inp?.value.trim(); if (!v) return;
-  const name = isConnected() ? getShortAddress() : 'Anon';
-  await sendChatMessage(window._liveRoom, v, name);
-  inp.value = '';
-}
-function appendLiveChat(msg) {
-  const log = document.getElementById('lr-chat-log');
-  if (!log) return;
-  const cls = msg.self ? 'me' : '';
-  log.innerHTML += `<div class="chm ${cls}"><div class="chm-av">${(msg.name || 'A').slice(0, 2).toUpperCase()}</div><div class="chm-b"><div class="chm-h">${msg.name || 'Anon'}</div><div class="chm-t">${msg.text.replace(/</g, '&lt;')}</div></div></div>`;
-  log.scrollTop = log.scrollHeight;
-}
-
-export async function openLiveStream(token) {
-  if (!isConnected()) { showN('Connect wallet to start a live'); return; }
-  try {
-    const { room, liveId } = await startLive({
-      tokenMint: token?.mint,
-      tokenName: token?.n || 'Untitled',
-      tokenTicker: token?.tk || '???',
-    });
-    currentLiveId = liveId;
-    activeRoom = room;
-    showN('🔴 Live stream started!');
-  } catch (e) {
-    showN('Stream failed: ' + e.message);
-  }
-}
-
-// ── Bubble Map ─────────────────────────────────────────────────────────────────
-export function buildBvChips() {
-  const tokens = getTokens();
-  if (!tokens.length) { document.getElementById('bv-chips').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--dim);">No tokens launched yet</div>'; return; }
-  if (!bvActive) bvActive = tokens[0].id;
-  const q = bvFilter.toLowerCase();
-  const list = tokens.filter(t => !q || t.n.toLowerCase().includes(q) || t.tk.toLowerCase().includes(q));
-  document.getElementById('bv-chips').innerHTML = '<div class="bv-quick-lbl">Quick Select:</div>' + list.map(t =>
-    `<div class="bv-chip${t.id === bvActive ? ' on' : ''}" onclick="window._app.selBvToken('${t.id}')"><span class="bv-chip-em">${t.em || '🎯'}</span>$${t.tk}</div>`
-  ).join('');
-}
-export function filterBvChips(q) { bvFilter = q; buildBvChips(); }
-export function selBvToken(id) { bvActive = id; buildBvChips(); renderBvMap(); }
-
-export function renderBvMap() {
-  const t = getToken(bvActive);
-  if (!t) {
-    document.getElementById('bv-insight').innerHTML = 'Select a token to view its holder distribution.';
-    return;
-  }
-  document.getElementById('bv-em').textContent = t.em || '🎯';
-  document.getElementById('bv-name').textContent = t.n;
-  document.getElementById('bv-tk').textContent = '$' + t.tk;
-  document.getElementById('bv-insight').innerHTML = `Token <b>${t.n}</b> was launched on Carpet. On-chain holder data requires a Solana RPC call — connect to a real RPC endpoint with the <code>getTokenLargestAccounts</code> method. This view will show real holders when connected.`;
-  document.getElementById('bv-linked').innerHTML = 'Connect to Solana mainnet RPC to fetch real holder data.';
-  document.getElementById('bv-t10').textContent = '—';
-  document.getElementById('bv-dev').textContent = '—';
-  document.getElementById('bv-hold').textContent = fh(t.h || 0);
-  document.getElementById('bv-hp').textContent = '—';
-  document.getElementById('bv-svg').innerHTML = '<text x="50%" y="50%" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" fill="rgba(238,240,245,.34)">On-chain data pending RPC connection</text>';
-}
-
-// ── Rewards ───────────────────────────────────────────────────────────────────
-export function renderRewards() {
-  const rewards = getRewards();
-  const dist = document.getElementById('rw-dist-list');
-  if (dist) {
-    if (!rewards.length) {
-      dist.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);">No rewards distributed yet. Tokens need to hit volume milestones.</div>';
-    } else {
-      dist.innerHTML = rewards.map(d => {
-        const t = getToken(d.tokenId);
-        return `<div class="rw-dist-row" onclick="window._app.openDet('${d.tokenId}')">
-          <div class="rw-dist-time">${new Date(d.time || Date.now()).toLocaleTimeString()}</div>
-          <div class="rw-dist-tk"><div class="rw-dist-em">${t?.em || '🎯'}</div><div><div class="rw-dist-n">${t?.n || '—'}</div><div class="rw-dist-tkv">$${t?.tk || '—'}</div></div></div>
-          <div class="rw-dist-tier">${d.tier}</div>
-          <div class="rw-dist-vol">${d.vol}<small> volume</small></div>
-          <div class="rw-dist-amt">+${d.amt}<small> burned</small></div>
-        </div>`;
-      }).join('');
-    }
-  }
-  const grid = document.getElementById('rw-topgrid');
-  if (grid) grid.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);grid-column:1/-1;">Reward data loads from on-chain events.</div>';
-}
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 export function pfTab(el, tab) {
@@ -796,8 +604,6 @@ export function pfTab(el, tab) {
       : '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);">No tokens created yet</div>';
   } else if (tab === 'activity') {
     c.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">Activity log — connect to RPC for on-chain history</div>';
-  } else if (tab === 'rewards') {
-    c.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">Rewards earned from volume milestones appear here</div>';
   }
 }
 
@@ -805,7 +611,6 @@ export function pfTab(el, tab) {
 export function init() {
   renderAll();
   refreshTicker();
-  buildBvChips();
   requestAnimationFrame(() => setTimeout(updCrs, 100));
 
   document.addEventListener('click', e => {
@@ -823,10 +628,7 @@ export function init() {
     openEditToken, closeEditToken, saveEditToken,
     openSwap, closeSwap, flipSwap, cswap, doSwap,
     openLaunch, closeLaunch, selMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,
-    previewImage, previewBanner, toggleBan, payBanner,
-    buildLive, openLiveRoom, closeLiveRoom, sendLiveChat, openLiveStream,
-    buildBvChips, filterBvChips, selBvToken, renderBvMap,
-    renderRewards,
+    previewImage,
     pfTab,
     cMove, setColSort, filterSearch,
     showN,
