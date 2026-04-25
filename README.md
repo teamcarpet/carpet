@@ -125,7 +125,7 @@ Every CARPET launch operates as a **closed value system**: tokens enter through 
        │                    │                    │
    1% platform fee       SOL out            24% sell tax
        │                    │                    │
-       ▼                                          ▼
+       ▼                                         ▼
                                        ┌────────────────────┐
                                        │  BUYBACK TREASURY  │
                                        │  (auto-buys+burns) │
@@ -175,12 +175,12 @@ Equal-entry per round means whales can't snipe rounds with bigger SOL — every 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT (Vite + JS)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
-│  │  Home / Cols │  │  Token Detail│  │  Bubble Map  │              │
-│  │  + Carousel  │  │  + Trade UI  │  │  + Holders   │              │
-│  └──────────────┘  └──────────────┘  └──────────────┘              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
+│  │  Home / Cols │  │  Token Detail│  │  Bubble Map  │               │
+│  │  + Carousel  │  │  + Trade UI  │  │  + Holders   │               │
+│  └──────────────┘  └──────────────┘  └──────────────┘               │
 │                                                                     │
-│  src/main.js                  src/wallet.js          src/ipfs.js   │
+│  src/main.js                  src/wallet.js          src/ipfs.js    │
 │  src/launchpad.js             src/jupiter.js         src/tokens.js  │
 │  src/bubble/*                 src/token-detail/*     src/profile.js │
 └─────────────┬───────────────────────────────┬───────────────────────┘
