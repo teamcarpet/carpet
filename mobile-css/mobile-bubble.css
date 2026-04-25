@@ -1,0 +1,164 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * CARPET BUBBLE MAP — MOBILE
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Mobile strategy:
+ *  - Search view: 2 columns → 1 column (Trending stacked above Featured)
+ *  - Graph view: sidebar collapsed to bottom drawer, canvas takes full width
+ *  - Info panel: slides up from bottom as sheet (can't be top-left on phone)
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ───── Search view ───── */
+  .bm-search-view {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .bm-sv-search {
+    width: 100%;
+    font-size: 12px;
+    padding: 12px 16px;
+  }
+
+  .bm-sv-cols {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bm-sv-card {
+    padding: 14px;
+  }
+
+  .bm-sv-card-h {
+    font-size: 12px;
+  }
+
+  /* Tighten row grid on mobile */
+  .bm-sv-grid,
+  .bm-sv-row {
+    grid-template-columns: 40px 1fr 90px;
+    gap: 8px;
+  }
+
+  /* Hide Volume column on mobile — MC + % is enough */
+  .bm-sv-grid > div:nth-child(2),
+  .bm-sv-row > .bm-sv-col-vol {
+    display: none;
+  }
+
+  .bm-sv-img, .bm-sv-emoji {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .bm-sv-tk { font-size: 12px; }
+  .bm-sv-n  { font-size: 10px; }
+  .bm-sv-mc { font-size: 12px; }
+
+  /* ───── Graph view ───── */
+  .bm-gv-topbar {
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .bm-gv-title { flex: 1; min-width: 0; }
+  .bm-gv-tk { font-size: 14px; }
+  .bm-gv-n {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bm-gv-tools {
+    margin-left: auto;
+    gap: 2px;
+  }
+  .bm-gv-tools button {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Graph body: canvas full width, sidebar moves to bottom */
+  .bm-gv-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+
+  .bm-gv-canvas-wrap {
+    min-height: 50vh;
+  }
+
+  /* Canvas needs full touch control */
+  .bm-gv-canvas {
+    touch-action: none;
+  }
+
+  /* Sidebar becomes a collapsible bottom drawer */
+  .bm-gv-sidebar {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    max-height: 280px;
+  }
+
+  .bm-addrlist {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .bm-al-rows {
+    max-height: 200px;
+  }
+
+  .bm-al-row {
+    padding: 8px;
+    font-size: 11px;
+    /* Bigger touch targets */
+    min-height: 36px;
+  }
+
+  /* Info panel: from top-left corner to a bottom sheet */
+  .bm-gv-info-anchor {
+    top: auto;
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+    pointer-events: none;
+  }
+  .bm-info-panel {
+    width: 100%;
+    max-width: none;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  /* Status pill stays readable */
+  .bm-gv-status {
+    font-size: 9.5px;
+    padding: 4px 8px;
+    bottom: 10px;
+    left: 10px;
+  }
+}
+
+@media (max-width: 430px) {
+  .bm-sv-grid, .bm-sv-row {
+    grid-template-columns: 32px 1fr 80px;
+    gap: 6px;
+  }
+  .bm-sv-card { padding: 10px; }
+  .bm-gv-topbar {
+    padding: 8px 10px;
+  }
+  .bm-gv-tk { font-size: 13px; }
+}
+
+@media (max-width: 375px) {
+  /* Hide the Bubble map link label on smallest screens */
+  .bm-gv-tools button:nth-child(n+4) {
+    display: none;
+  }
+}

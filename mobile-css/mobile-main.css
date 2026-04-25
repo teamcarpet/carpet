@@ -1,0 +1,351 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * CARPET MOBILE RESPONSIVE — v3
+ * ═══════════════════════════════════════════════════════════════════════
+ * Real selector map (verified):
+ *   #hdr  .hdr-left .hdr-mid .hdr-right .hdr-search .hdr-stats
+ *   #cols-wrap   .col   .col-body   .tr   .tr-em
+ *   #sb   .sb-top   .sbi   .sbi-ico   .sbi-lbl
+ *   #main   #c-vp   .ccard   .ticker
+ *   #footer  .foot-l  .foot-c  .foot-r  .foot-links  .foot-lnk
+ *   .ov .modal   .mhdr   .mbdy
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ───── Sidebar → Bottom tab bar ───── */
+  #sb {
+    width: 100% !important;
+    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    flex-direction: row !important;
+    border-right: none !important;
+    border-top: 1px solid var(--line) !important;
+    background: var(--bg-2) !important;
+    z-index: 500 !important;
+    /* Always show — Safari has hidden it for some users */
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    overflow: hidden !important;
+  }
+  #sb.open { width: 100% !important; }
+
+  /* Hide logo area — no room on mobile */
+  #sb .sb-top,
+  #sb .logo-block,
+  #sb .logo-text,
+  #sb .logo-mark {
+    display: none !important;
+  }
+
+  /* Hide bottom-foot button group (Launch / Swap) — those exist in the header on mobile */
+  #sb .sb-foot {
+    display: none !important;
+  }
+
+  /* sb-nav wrapper takes the full width and lays out children as flex-row */
+  #sb .sb-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+
+  #sb .sbi {
+    flex: 1 !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: auto !important;
+    height: 100% !important;
+    padding: 6px 4px !important;
+    gap: 2px !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  /* Kill the desktop left-bar indicator */
+  #sb .sbi::before {
+    display: none !important;
+  }
+  #sb .sbi:hover { background: transparent !important; }
+  #sb .sbi.on {
+    background: rgba(255,45,45,.06) !important;
+    color: var(--red) !important;
+    border-top: 2px solid var(--red) !important;
+  }
+  #sb .sbi-ico {
+    font-size: 20px !important;
+    width: auto !important;
+    margin: 0 !important;
+  }
+  #sb .sbi-lbl {
+    opacity: 1 !important;
+    font-size: 9px !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+    display: block !important;
+  }
+
+  /* ───── Main loses left margin ───── */
+  #main {
+    margin-left: 0 !important;
+  }
+  body.sb-open #main {
+    margin-left: 0 !important;
+  }
+
+  /* ───── Header — стекается ───── */
+  #hdr {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    height: auto !important;
+  }
+  .hdr-left {
+    width: 100%;
+    order: 1;
+  }
+  .hdr-mid {
+    width: 100%;
+    order: 3;
+    justify-content: stretch !important;
+  }
+  .hdr-right {
+    width: 100%;
+    order: 2;
+    justify-self: stretch !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+
+  .hdr-search {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hdr-stats {
+    display: none !important;
+  }
+
+  .hdr-right .btn,
+  .hdr-right button {
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+  }
+
+  #wmenu {
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-width: none !important;
+    top: calc(100% + 4px) !important;
+  }
+
+  /* ───── Ticker ───── */
+  .ticker {
+    height: 26px !important;
+  }
+  .ticker-inner {
+    font-size: 10px !important;
+    gap: 14px !important;
+    padding: 0 10px !important;
+  }
+
+  /* ───── 3 columns → 1 ───── */
+  #cols-wrap {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    background: transparent !important;
+    padding: 8px !important;
+  }
+
+  .col {
+    min-height: 280px;
+  }
+  .col-body {
+    max-height: 380px;
+  }
+
+  /* ───── Carousel ───── */
+  #c-vp { padding: 0 !important; }
+  .ccard {
+    min-width: 240px !important;
+    width: 240px !important;
+  }
+  .ccard-top { padding: 10px 12px !important; }
+  .ccard-foot { padding: 8px 12px !important; }
+  .ccard-name { font-size: 13px !important; }
+  .ccard-tk { font-size: 11px !important; }
+  #cprev, #cnext {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* ───── Token rows ───── */
+  .tr {
+    padding: 8px 10px !important;
+  }
+  .tr-em { font-size: 22px !important; }
+  .tr-name { font-size: 12px !important; }
+  .tr-tk { font-size: 11px !important; }
+  .tr-meta {
+    font-size: 10px !important;
+    gap: 6px !important;
+    flex-wrap: wrap;
+  }
+  .tr-meta span { white-space: nowrap; }
+  .tr-pct { font-size: 11px !important; }
+  .tr-age { font-size: 10px !important; }
+
+  /* ───── Modals ───── */
+  .ov .modal {
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 80px);
+    margin: 10px !important;
+  }
+  .mhdr { padding: 12px 14px !important; }
+  .mbdy { padding: 14px !important; }
+
+  /* ───── Launch form ───── */
+  .frow {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .igrid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px 12px !important;
+  }
+  .igr { padding: 6px 10px !important; }
+  .igk { font-size: 9px !important; }
+  .igv { font-size: 11px !important; }
+  .mcard { padding: 14px !important; }
+
+  /* ───── Footer — clean stacked layout ───── */
+  #footer {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding: 18px 16px !important;
+    text-align: center;
+  }
+  .foot-l,
+  .foot-c,
+  .foot-r {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  .foot-l {
+    align-items: center !important;
+  }
+  .foot-brand {
+    justify-content: center !important;
+  }
+  .foot-tagline {
+    text-align: center !important;
+  }
+  /* Links — горизонтальный ряд с разделителями · */
+  .foot-links {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 4px 12px !important;
+    width: 100%;
+  }
+  .foot-lnk {
+    white-space: nowrap !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+  /* Right side — social icons in a row */
+  .foot-r {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+  }
+  .foot-status {
+    margin-right: 8px;
+  }
+
+  /* ───── Notification ───── */
+  #nbar {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    font-size: 11px !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   PHONE (≤ 430px)
+──────────────────────────────────────────────────────────────── */
+@media (max-width: 430px) {
+  .hdr-right .btn {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+  .ccard {
+    min-width: 220px !important;
+    width: 220px !important;
+  }
+  .ccard-rank { font-size: 9px !important; }
+  .tr-em { font-size: 20px !important; }
+  .tr {
+    padding: 7px 9px !important;
+    gap: 8px !important;
+  }
+  /* Footer: shrink even more on phones */
+  .foot-links {
+    gap: 2px 10px !important;
+  }
+  .foot-lnk {
+    font-size: 9.5px !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SMALL PHONE (≤ 375px)
+──────────────────────────────────────────────────────────────── */
+@media (max-width: 375px) {
+  .hdr-right { gap: 4px !important; }
+  .hdr-right .btn {
+    padding: 5px 7px !important;
+    font-size: 9px !important;
+  }
+  #cbtn {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tr-meta { font-size: 9px !important; }
+  #sb .sbi-lbl { font-size: 8px !important; }
+  #sb .sbi-ico { font-size: 18px !important; }
+  .ccard {
+    min-width: 200px !important;
+    width: 200px !important;
+  }
+}

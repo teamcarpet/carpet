@@ -1,0 +1,329 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * CARPET TOKEN DETAIL — MOBILE
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Mobile layout reflow:
+ *   Desktop:
+ *     [topbar                   ]
+ *     [center    ][right sidebar]
+ *
+ *   Mobile:
+ *     [topbar                ]
+ *     [center (single col)   ]
+ *     [bonding / chat / topH ]  ← was right sidebar, now stacks below
+ *     [fixed Buy/Sell CTA    ]  ← always visible at bottom
+ *     [bottom sheet on tap   ]  ← expands to full trade panel
+ *
+ * The trade panel becomes a two-layer widget:
+ *   - Always-visible CTA bar (56px tall, fixed at bottom)
+ *   - Full panel slides up as bottom sheet when CTA tapped
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  /* Already handled by token-detail.css base rules: stacks into 1 col */
+}
+
+@media (max-width: 768px) {
+
+  /* Extra bottom padding so Fixed CTA doesn't cover last item */
+  .td-root {
+    padding-bottom: 70px;
+  }
+
+  /* ───── Topbar ───── */
+  .td-topbar {
+    padding: 10px 12px;
+    gap: 10px;
+    /* keeps top sticky when scrolling */
+  }
+  .td-back {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  /* ───── Header ───── */
+  .td-hdr { gap: 10px; }
+  .td-hdr-img {
+    width: 38px;
+    height: 38px;
+  }
+  .td-hdr-emoji { font-size: 22px; }
+  .td-hdr-ticker { font-size: 14px; }
+  .td-hdr-name {
+    font-size: 11px;
+    max-width: 140px;
+  }
+  .td-hdr-meta { font-size: 9px; }
+
+  /* Actions — keep compact, some hidden */
+  .td-hdr-actions {
+    gap: 4px;
+  }
+  .td-hdr-btn {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  /* Hide favourite on tiniest */
+  .td-hdr-btn[data-act="favourite"] {
+    display: none;
+  }
+
+  /* ───── Layout: 1 column ───── */
+  .td-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  /* Reorder so right panel content appears in a sensible order */
+  .td-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* Hide the trade panel from normal flow — it becomes fixed bottom sheet */
+  }
+  /* Remove desktop trade panel from normal flow on mobile;
+     the fixed bottom sheet (see below) replaces it. */
+  #td-trade-slot {
+    display: none;
+  }
+
+  /* ───── Market card ───── */
+  .td-market { padding: 14px 16px; }
+  .td-market-main {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .td-market-value { font-size: 32px; }
+  .td-market-ath-lbl { font-size: 10px; }
+
+  /* ───── Chart toolbar ───── */
+  .td-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    gap: 8px;
+  }
+  .td-tb-resolutions {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .td-tb-resolutions::-webkit-scrollbar { display: none; }
+  .td-tb-res {
+    padding: 6px 10px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .td-tb-right {
+    justify-content: space-between;
+  }
+  .td-tb-opt {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  /* ───── Chart ───── */
+  .td-chart-wrap {
+    height: 320px;
+  }
+  .td-chart-status-title { font-size: 12px; }
+  .td-chart-status-sub { font-size: 10px; }
+
+  /* ───── Trades table ───── */
+  .td-trades-head {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .td-trades-filter-input { width: 70px; }
+
+  /* Reduce columns — hide "Amount (token)" and "Txn" */
+  .td-trades-grid-head,
+  .td-trades-row {
+    grid-template-columns: 1fr 55px 90px 70px;
+    padding: 8px 12px;
+    gap: 6px;
+    font-size: 10.5px;
+  }
+  .td-trades-grid-head > div:nth-child(4),
+  .td-trades-grid-head > div:nth-child(6),
+  .td-trades-row > div:nth-child(4),
+  .td-trades-row > div:nth-child(6) {
+    display: none;
+  }
+
+  /* ───── Bonding progress ───── */
+  .td-bonding { padding: 12px 14px; }
+  .td-bonding-title { font-size: 9.5px; }
+
+  /* ───── Chat ───── */
+  .td-chat-head { padding: 10px 12px; }
+  .td-chat-empty { padding: 20px 12px; }
+
+  /* ───── Top holders ───── */
+  .td-holders-head { padding: 10px 12px; }
+  .td-holders-row {
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+  .td-holders-list {
+    max-height: 260px;
+  }
+
+  /* ───── FIXED BOTTOM SHEET — Buy/Sell ───── */
+
+  /* Always-visible 2-button CTA bar above the bottom nav */
+  body::after {
+    /* Not usable — need real element. See the JS companion note below. */
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   The fixed bottom sheet needs a DOM element in index.html.
+   The rules below style it — element gets injected by main.js.
+   See integration notes at the bottom of this file.
+──────────────────────────────────────────────────────────────── */
+
+/* Fixed CTA bar — always visible while on token detail page */
+@media (max-width: 768px) {
+  .td-mobile-cta {
+    position: fixed;
+    bottom: 56px;            /* above the bottom nav tab bar */
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    z-index: 400;
+  }
+  .td-mobile-cta button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .td-mobile-cta .cta-buy  { background: var(--up, #00E5A0); color: #041812; }
+  .td-mobile-cta .cta-sell { background: var(--red); color: #fff; }
+
+  /* Bottom sheet — slides up from bottom when CTA tapped */
+  .td-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 600;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.22s;
+  }
+  .td-sheet-overlay.open {
+    display: block;
+    opacity: 1;
+  }
+
+  .td-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 85vh;
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    z-index: 700;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .td-sheet.open {
+    transform: translateY(0);
+  }
+
+  /* Handle / drag indicator at the top */
+  .td-sheet-handle {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+    cursor: pointer;
+  }
+  .td-sheet-handle::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  .td-sheet-body {
+    padding: 0 16px 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  /* Inside the sheet, use the desktop trade panel styles almost verbatim,
+     but make inputs larger for touch. */
+  .td-sheet .td-trade {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+  .td-sheet .td-trade-tabs {
+    margin-bottom: 16px;
+  }
+  .td-sheet .td-trade-tab {
+    padding: 12px;
+    font-size: 13px;
+  }
+  .td-sheet .td-trade-input {
+    font-size: 18px;
+    padding: 16px 60px 16px 16px;
+  }
+  .td-sheet .td-trade-quick {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .td-sheet .td-trade-q {
+    padding: 10px 4px;
+    font-size: 11px;
+  }
+  .td-sheet .td-trade-submit {
+    padding: 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 430px) {
+  .td-market-value { font-size: 28px; }
+  .td-chart-wrap { height: 280px; }
+  .td-trades-grid-head,
+  .td-trades-row {
+    grid-template-columns: 1fr 50px 80px;
+  }
+  .td-trades-grid-head > div:nth-child(5),
+  .td-trades-row > div:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .td-topbar { padding: 8px 10px; }
+  .td-back { font-size: 9px; }
+  .td-hdr-img { width: 32px; height: 32px; }
+  .td-hdr-ticker { font-size: 13px; }
+  .td-hdr-name { font-size: 10px; max-width: 100px; }
+  .td-hdr-actions { display: none; } /* hide share/copy on smallest */
+  .td-market-value { font-size: 24px; }
+  .td-chart-wrap { height: 240px; }
+}

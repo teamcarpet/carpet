@@ -23,10 +23,11 @@ import {
    } from './profile.js';
 
 import { mountBubbleView, unmountBubbleView } from './bubble/bubble.js';
+
+import { mountTokenDetail, unmountTokenDetail } from './token-detail/token-detail.js';
    
 
 // ── Globals ──────────────────────────────────────────────────────────────────
-let curTk = null, tmode = 'buy';
 let sbOpen = false;
 let ci = 0; const CV = 3;
 const colSort = { new: 'date', bonding: 'prog', migrated: 'date' };
@@ -83,7 +84,6 @@ function updateWalletUI() {
     btn.classList.remove('ok');
     document.getElementById('hdr-sol').textContent = '';
   }
-  if (curTk && document.getElementById('tdm').classList.contains('open')) rdeta(curTk);
   refreshTicker();
 }
 
@@ -124,6 +124,64 @@ export function setView(v) {
   if (v === 'profile') renderProfile();
 }
 export function goProfile() { setView('profile'); closeWMenu(); }
+
+
+export function openDet(id) {
+  const token = getToken(id);
+  if (!token || !token.mint) {
+    showN('Token not found');
+    return;
+  }
+  const container = document.getElementById('td-mount');
+  if (!container) {
+    console.error('[main] #td-mount not found in DOM');
+    return;
+  }
+  // Show the mount container, hide other views.
+  ['home', 'bubble', 'profile'].forEach(v => {
+    const el = document.getElementById(v + '-view');
+    if (el) el.style.display = 'none';
+  });
+  container.style.display = 'flex';
+
+  mountTokenDetail(container, {
+    mint:    token.mint,
+    onBack:  () => {
+      unmountTokenDetail();
+      container.style.display = 'none';
+      setView('home');
+    },
+    onTrade: async ({ mint, side, amount }) => {
+      // Wire into existing doTrade logic.
+      // You may need to adapt depending on how doTrade is structured in your main.js.
+      if (!isConnected()) {
+        showN('Connect wallet first');
+        return;
+      }
+      try {
+        const provider = window.phantom?.solana || window.solana;
+        const wallet = {
+          publicKey: getPublicKey(),
+          signTransaction:    (tx) => provider.signTransaction(tx),
+          signAllTransactions:(txs) => provider.signAllTransactions(txs),
+        };
+        if (side === 'buy') {
+          const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
+          const sig = await buyTokens(wallet, mint, lamports);
+          showN(`✓ Bought · ${sig.slice(0, 8)}…`);
+        } else {
+          const decimals = token.decimals || 6;
+          const tokenAmount = Math.floor(amount * Math.pow(10, decimals));
+          const sig = await sellTokens(wallet, mint, tokenAmount);
+          showN(`✓ Sold · ${sig.slice(0, 8)}…`);
+        }
+        await refreshBalance();
+      } catch (err) {
+        showN('Trade failed: ' + err.message);
+      }
+    },
+  });
+}
 
 // ── Ticker ───────────────────────────────────────────────────────────────────
 export function refreshTicker() {
@@ -233,141 +291,6 @@ export function filterSearch(q) { searchQ = q.toLowerCase(); renderAll(); }
 window.addEventListener('platform:token-added', renderAll);
 window.addEventListener('platform:token-updated', renderAll);
 
-// ── Token Detail ──────────────────────────────────────────────────────────────
-export function openDet(id) {
-  curTk = getToken(id); if (!curTk) return;
-  tmode = 'buy'; rdeta(curTk);
-  document.getElementById('tdm').classList.add('open');
-}
-export function closeDet() { document.getElementById('tdm').classList.remove('open'); }
-export function setTm(m) { tmode = m; rdeta(curTk); }
-export function setTa(v) { const el = document.getElementById('tinp'); if (el) { el.value = v; calcTrade(); } }
-
-function chatHTML(t) {
-  const footer = isConnected()
-    ? `<div class="chat-foot"><input class="chat-inp" id="chat-inp" placeholder="Write a message..." onkeydown="window._app.chatKey(event)"><button class="chat-send" onclick="window._app.sendChat()"><iconify-icon icon="solar:arrow-right-bold"></iconify-icon></button></div>`
-    : `<div class="chat-lock"><div class="chat-lock-t">Connect wallet to chat<small>Only connected wallets can post messages</small></div><button class="btn btn-primary btn-sm" onclick="window._app.walletClick(event)"><iconify-icon icon="solar:wallet-bold" style="font-size:12px;"></iconify-icon> Connect</button></div>`;
-  return `<div class="chat-wrap">
-    <div class="chat-head">
-      <div class="chat-title"><iconify-icon icon="solar:chat-round-dots-bold" style="font-size:13px;"></iconify-icon>Token Chat</div>
-      <div class="chat-online"><div class="dot"></div>Live chat</div>
-    </div>
-    <div class="chat-log" id="chat-log"></div>
-    ${footer}
-  </div>`;
-}
-
-function rdeta(t) {
-  if (!t) return;
-  document.getElementById('tdttl').innerHTML = `<span style="font-size:16px;">${t.em || '🎯'}</span> ${t.n} — <span style="color:var(--text);">$${t.tk}</span>`;
-  const up = (t.pct || 0) >= 0, W = 520, H = 130;
-  let y = H * .55, pts = [];
-  for (let i = 0; i <= 60; i++) { y += ((Math.random() - .44) * 6); y = Math.max(12, Math.min(H - 12, y)); pts.push(`${(i / 60) * W},${y}`); }
-  const col = up ? '#00E5A0' : '#FF2D2D', pd = 'M ' + pts.join(' L '), fd = pd + ` L ${W},${H} L 0,${H} Z`;
-  const ib = tmode === 'buy';
-  const bal = isConnected() ? getBalance().toFixed(3) + ' SOL' : '—';
-  const pg = t.col !== 'migrated'
-    ? `<div style="margin-top:6px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;"><div style="font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;">Bonding</div><div style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);">${t.prog || 0}%</div></div><div style="height:4px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden;"><div style="height:100%;width:${t.prog || 0}%;background:var(--amber);border-radius:99px;"></div></div><div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px;">${t.prog || 0}/100 SOL raised</div></div>`
-    : `<div style="font-family:var(--mono);font-size:10.5px;color:var(--up);background:var(--up-soft);border:1px solid var(--up-bdr);padding:9px 12px;border-radius:6px;display:flex;align-items:center;gap:7px;"><iconify-icon icon="solar:check-circle-bold" style="font-size:13px;"></iconify-icon> Graduated · Raydium CPMM · Buyback active</div>`;
-  const imgSrc = t.imageUrl ? `<img src="${t.imageUrl}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;" alt="${t.n}">` : `<div class="td-av">${t.em || '🎯'}</div>`;
-  document.getElementById('tdbody').innerHTML = `<div class="tdlay">
-    <div class="tdl">
-      <div class="td-hero">${imgSrc}<div><div class="td-n">${t.n}</div><div class="td-tk">$${t.tk}</div><div class="td-dsc">${t.d2 || ''}</div></div></div>
-      <div class="td-sg">
-        <div class="td-st"><div class="td-sl">MC</div><div class="td-sv">${fm(t.mc || 0)}</div></div>
-        <div class="td-st"><div class="td-sl">Vol</div><div class="td-sv">${fm(t.vol || 0)}</div></div>
-        <div class="td-st"><div class="td-sl">Hold</div><div class="td-sv">${(t.h || 0).toLocaleString()}</div></div>
-        <div class="td-st"><div class="td-sl">24h</div><div class="td-sv ${up ? 'up-c' : 'dn-c'}">${up ? '+' : ''}${t.pct || 0}%</div></div>
-      </div>
-      <div class="td-ch"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${col}" stop-opacity=".25"/><stop offset="100%" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${fd}" fill="url(#cg)"/><path d="${pd}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
-      ${pg}
-    </div>
-    <div class="tdr">
-      <div class="tpanel">
-        <div class="ttabs"><button class="ttab ${ib ? 'b' : ''}" onclick="window._app.setTm('buy')">Buy</button><button class="ttab ${!ib ? 's' : ''}" onclick="window._app.setTm('sell')">Sell</button></div>
-        <div class="t-bal">${ib ? 'Balance: ' + bal : 'Balance: — $' + t.tk}</div>
-        <div class="t-lbl">${ib ? 'Amount (SOL)' : 'Amount ($' + t.tk + ')'}</div>
-        <input class="t-inp" id="tinp" type="number" placeholder="0.00" oninput="window._app.calcTrade()">
-        <div class="t-qk"><div class="t-qb" onclick="window._app.setTa(.1)">0.1</div><div class="t-qb" onclick="window._app.setTa(.5)">0.5</div><div class="t-qb" onclick="window._app.setTa(1)">1</div><div class="t-qb" onclick="window._app.setTa(5)">5</div></div>
-        <div class="t-info">Fee 1%<br>${ib ? 'Max 1% supply' : 'Tax 24% → buyback'}</div>
-        <div class="t-rcv" id="trcv">You get: <span>—</span></div>
-        <button class="t-sub ${tmode}" onclick="window._app.doTrade()" id="tbtn">${ib ? 'Buy $' + t.tk : 'Sell $' + t.tk}</button>
-      </div>
-    </div>
-  </div>
-  ${chatHTML(t)}`;
-}
-
-export function calcTrade() {
-  if (!curTk) return;
-  const a = parseFloat(document.getElementById('tinp')?.value) || 0;
-  const r = tmode === 'buy' ? `≈ ${Math.floor(a * 1e6 * .99).toLocaleString()} $${curTk.tk}` : `≈ ${(a * 1e-6 * .75).toFixed(4)} SOL`;
-  const el = document.getElementById('trcv');
-  if (el) el.innerHTML = `You get: <span>${r}</span>`;
-}
-
-export async function doTrade() {
-  if (!isConnected()) { showN('Please connect wallet first'); return; }
-  const a = document.getElementById('tinp')?.value || '0';
-  const btn = document.getElementById('tbtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
-  try {
-    if (!curTk?.mint) {
-      showN('Token not yet on-chain');
-      return;
-    }
-
-    // Use our launchpad for bonding-mode tokens, Jupiter for others
-    const useLaunchpad = curTk.mode === 'bonding' && curTk.poolSig;
-
-    if (useLaunchpad) {
-      const provider = window.phantom?.solana || window.solana;
-      const wallet = {
-        publicKey: getPublicKey(),
-        signTransaction: (tx) => provider.signTransaction(tx),
-        signAllTransactions: (txs) => provider.signAllTransactions(txs),
-      };
-
-      let sig;
-      if (tmode === 'buy') {
-        const lamports = Math.floor(parseFloat(a) * LAMPORTS_PER_SOL);
-        sig = await buyTokens(wallet, curTk.mint, lamports);
-      } else {
-        const decimals = curTk.decimals || 6;
-        const tokenAmount = Math.floor(parseFloat(a) * Math.pow(10, decimals));
-        sig = await sellTokens(wallet, curTk.mint, tokenAmount);
-      }
-      showN(`✓ ${tmode === 'buy' ? 'Bought' : 'Sold'} $${curTk.tk} via launchpad · ${sig.slice(0, 8)}...`);
-    } else {
-      // Fallback to Jupiter for non-launchpad tokens
-      const inputMint = tmode === 'buy' ? CONFIG.MINTS.SOL : curTk.mint;
-      const outputMint = tmode === 'buy' ? curTk.mint : CONFIG.MINTS.SOL;
-      const decimals = tmode === 'buy' ? 9 : (curTk.decimals || 6);
-      const amount = toRawAmount(a, decimals);
-      const quote = await getQuote({ inputMint, outputMint, amount });
-      const sig = await executeSwap(quote);
-      showN(`✓ ${tmode === 'buy' ? 'Bought' : 'Sold'} $${curTk.tk} · ${sig.slice(0, 8)}...`);
-    }
-
-    await refreshBalance();
-  } catch (err) {
-    showN('Trade failed: ' + err.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = (tmode === 'buy' ? 'Buy $' : 'Sell $') + curTk.tk; }
-  }
-}
-
-export function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
-export function sendChat() {
-  if (!isConnected()) { showN('Please connect wallet to chat'); return; }
-  const inp = document.getElementById('chat-inp');
-  const v = inp.value.trim(); if (!v) return;
-  const log = document.getElementById('chat-log');
-  const addr = getShortAddress() || 'You';
-  log.innerHTML += `<div class="chm me"><div class="chm-av">${addr.slice(0, 2).toUpperCase()}</div><div class="chm-b"><div class="chm-h">You<span>just now</span></div><div class="chm-t">${v.replace(/</g, '&lt;')}</div></div></div>`;
-  inp.value = '';
-  log.scrollTop = log.scrollHeight;
-}
 
 // ── Edit Token ────────────────────────────────────────────────────────────────
 export function openEditToken(id) {
@@ -410,6 +333,8 @@ export async function saveEditToken() {
     if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 }
+
+
 
 // ── Jupiter Swap Modal ────────────────────────────────────────────────────────
 let swapDebounce = null;
@@ -617,14 +542,13 @@ export function init() {
     if (!e.target.closest('#cbtn') && !e.target.closest('#wmenu')) closeWMenu();
   });
   document.querySelectorAll('.ov').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
-  document.getElementById('tdm').addEventListener('click', e => { if (e.target === document.getElementById('tdm')) closeDet(); });
   window.addEventListener('resize', () => { updCrs(); });
 
   // Expose all public functions to window for inline HTML handlers
   window._app = {
     walletClick, disconnectWalletUI, toggleWMenu, closeWMenu, copyAddrUI, openSolscan,
     toggleSb, setView, goProfile,
-    openDet, closeDet, setTm, setTa, calcTrade, doTrade, chatKey, sendChat,
+    openDet, 
     openEditToken, closeEditToken, saveEditToken,
     openSwap, closeSwap, flipSwap, cswap, doSwap,
     openLaunch, closeLaunch, selMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,

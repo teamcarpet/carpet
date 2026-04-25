@@ -2,11 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1440">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CARPET — Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/src/bubble/bubble.css">
+<link rel="stylesheet" href="/src/token-detail/token-detail.css">
+<link rel="stylesheet" href="/mobile-css/mobile-main.css">
+<link rel="stylesheet" href="/mobile-css/mobile-bubble.css">
+<link rel="stylesheet" href="/mobile-css/mobile-token-detail.css">
 <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
@@ -393,76 +397,6 @@ body.sb-open #main{margin-left:180px}
 .swir span:last-child{color:var(--text);font-weight:600}
 .swrt{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:right;margin-bottom:8px;letter-spacing:.3px}
 
-/* TOKEN DETAIL */
-#tdm{position:fixed;inset:0;z-index:700;display:none;align-items:center;justify-content:center;background:rgba(5,8,14,.82);backdrop-filter:blur(6px);padding:20px;overflow-y:auto}
-#tdm.open{display:flex}
-#tdw{width:920px;max-width:95vw;animation:scaleIn .22s var(--ease);margin:auto}
-.tdbody{padding:18px 20px 20px;background:var(--bg-2);border:1px solid var(--red-bdr);border-top:none;border-radius:0 0 10px 10px;box-shadow:0 0 50px var(--red-glow)}
-.tdlay{display:flex;gap:14px;margin-bottom:16px}
-.tdl{flex:1;min-width:0}.tdr{width:240px;flex-shrink:0}
-.td-hero{display:flex;gap:14px;margin-bottom:12px;align-items:flex-start}
-.td-av{width:60px;height:60px;border-radius:10px;flex-shrink:0;font-size:34px;display:flex;align-items:center;justify-content:center;background:var(--bg-3);border:1px solid var(--line)}
-.td-n{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);letter-spacing:.3px;line-height:1.1}
-.td-tk{font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;margin-top:3px}
-.td-dsc{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.6;letter-spacing:.3px}
-.td-sg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.td-st{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px}
-.td-sl{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px}
-.td-sv{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
-.td-ch{height:130px;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:10px}
-.td-ch svg{width:100%;height:100%}
-.tpanel{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px}
-.ttabs{display:flex;gap:3px;margin-bottom:12px;background:var(--bg-2);padding:3px;border-radius:6px}
-.ttab{flex:1;padding:8px;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:var(--muted);cursor:pointer;border:none;background:transparent;border-radius:4px;transition:all .14s;text-transform:uppercase}
-.ttab:hover{color:var(--text)}
-.ttab.b{background:var(--up);color:#002015;box-shadow:0 0 10px rgba(0,229,160,.3)}
-.ttab.s{background:var(--red);color:#fff;box-shadow:0 0 10px var(--red-glow)}
-.t-lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--dim);letter-spacing:1.3px;margin-bottom:5px;text-transform:uppercase}
-.t-inp{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red);background:var(--bg-2);border:1px solid var(--line);
-  padding:10px 12px;border-radius:6px;width:100%;outline:none;margin-bottom:10px;transition:all .14s;letter-spacing:-.3px}
-.t-inp:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
-.t-qk{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:10px}
-.t-qb{padding:6px 4px;font-family:var(--mono);font-size:10.5px;font-weight:700;text-align:center;background:var(--bg-2);
-  border:1px solid var(--line);color:var(--muted);border-radius:4px;cursor:pointer;transition:all .14s}
-.t-qb:hover{border-color:var(--red);color:var(--red)}
-.t-info{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.7;letter-spacing:.3px}
-.t-bal{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right;margin-bottom:6px;letter-spacing:.3px}
-.t-rcv{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:.3px}
-.t-rcv span{color:var(--red);font-weight:700}
-.t-sub{width:100%;padding:12px;border:none;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:700;
-  letter-spacing:2px;margin-top:8px;transition:all .15s;text-transform:uppercase}
-.t-sub:hover{transform:translateY(-1px)}
-.t-sub.buy{background:var(--up);color:#002015;box-shadow:0 0 16px rgba(0,229,160,.3)}
-.t-sub.sell{background:var(--red);color:#fff;box-shadow:0 0 16px var(--red-glow)}
-
-/* CHAT */
-.chat-wrap{background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
-.chat-head{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg-3);display:flex;align-items:center;justify-content:space-between}
-.chat-title{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
-.chat-online{font-family:var(--mono);font-size:9.5px;color:var(--up);font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
-.chat-online .dot{width:6px;height:6px;border-radius:50%;background:var(--up);animation:pulse 2.5s ease-in-out infinite}
-.chat-log{flex:1;padding:10px 12px;overflow-y:auto;max-height:200px;display:flex;flex-direction:column;gap:8px}
-.chm{display:flex;gap:9px;align-items:flex-start}
-.chm-av{width:26px;height:26px;border-radius:6px;background:var(--bg-3);border:1px solid var(--line);font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:.3px}
-.chm.me .chm-av{background:var(--red);color:#fff;border-color:var(--red)}
-.chm-b{flex:1;min-width:0}
-.chm-h{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--text);letter-spacing:.3px}
-.chm.me .chm-h{color:var(--red)}
-.chm-h span{color:var(--dim);font-size:9.5px;font-weight:500;letter-spacing:.3px}
-.chm-t{font-family:var(--mono);font-size:11.5px;color:var(--text-2);line-height:1.55;word-wrap:break-word;margin-top:2px;letter-spacing:.2px}
-.chat-foot{padding:10px 12px;border-top:1px solid var(--line);background:var(--bg-3);display:flex;gap:8px}
-.chat-inp{flex:1;font-family:var(--mono);font-size:11.5px;color:var(--text);background:var(--bg);border:1px solid var(--line);
-  padding:9px 12px;border-radius:6px;outline:none;transition:all .14s;letter-spacing:.2px}
-.chat-inp:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
-.chat-inp::placeholder{color:var(--dim)}
-.chat-send{width:36px;height:36px;border:none;border-radius:6px;background:var(--red);color:#fff;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .14s}
-.chat-send:hover{background:var(--red-hi);box-shadow:0 0 12px var(--red-glow)}
-.chat-lock{padding:16px 14px;background:var(--red-softer);border-top:1px solid var(--red-bdr);display:flex;align-items:center;justify-content:space-between;gap:10px}
-.chat-lock-t{font-family:var(--mono);font-size:11px;color:var(--red);font-weight:700;letter-spacing:.5px;line-height:1.5;text-transform:uppercase}
-.chat-lock-t small{display:block;color:var(--muted);font-weight:500;font-size:10px;letter-spacing:.3px;margin-top:3px;text-transform:none}
-
 </style>
 </head>
 <body>
@@ -625,6 +559,9 @@ body.sb-open #main{margin-left:180px}
   <!-- PROFILE VIEW -->
   <div id="profile-view" style="display:none;flex-direction:column;padding-bottom:40px;"></div>
 
+  <!-- TOKEN DETAIL MOUNT -->
+ <div id="td-mount" style="display:none;"></div>
+
 </div><!-- #main -->
 </div><!-- #shell -->
 
@@ -699,15 +636,6 @@ body.sb-open #main{margin-left:180px}
   </div>
 </div>
 
-<!-- TOKEN DETAIL -->
-<div id="tdm">
-  <div id="tdw">
-    <div class="modal">
-      <div class="mhdr"><div class="mhdr-t" id="tdttl">Token</div><button class="mcls" onclick="closeDet()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button></div>
-      <div class="tdbody" id="tdbody"></div>
-    </div>
-  </div>
-</div>
 
 <!-- EDIT TOKEN MODAL -->
 <div class="ov" id="edit-modal">
