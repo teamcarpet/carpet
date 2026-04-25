@@ -55,7 +55,7 @@ CARPET doesn't try to be the next pump.fun. It exists because every existing lau
 | **No way to reward early supporters fairly** | Two presale modes — Regular (6 rounds × 10%, 24h) and Extreme (20 rounds × 5%, ~100min). Equal entry. No whales. |
 | **Sell pressure murders tokens at 1k MC** | 24% sell tax on bonding curve, 100% routed to buyback treasury. Sellers pay for buybacks. |
 | **Fake graduations, rugged LPs** | Migration to Meteora DAMM v2 is on-chain, atomic, and irreversible. LP tokens locked to program PDA. |
-| **No yield for creators or platform** | Meteora DAMM v2 fee accrual is captured by the program and split: 80% LP holders / 15% buyback / 5% platform |
+| **No yield for creators or platform** | Meteora DAMM v2 trading fees keep accruing post-migration. The program holds the LP NFT and routes accrued fees back through the buyback / platform / creator treasury structure |
 | **Closed black-box pricing** | Fully open bonding curve formula, on-chain state, anyone can audit live treasury balance |
 
 The thesis: **a launchpad should make every actor better off** — creators, traders, and the platform — not just the platform.
@@ -132,25 +132,48 @@ Every CARPET launch operates as a **closed value system**: tokens enter through 
                                        └────────────────────┘
 ```
 
-### Migration split (at 100 SOL raised)
+### Migration splits (at 100 SOL raised)
+
+CARPET has **two distinct migration paths** depending on launch type. Each routes the raised reserve differently.
+
+**Bonding curve migration:**
 
 ```
-┌──────────────────────────────────────────────┐
-│        TOTAL RESERVE: 100 SOL                │
-├──────────────────────────────────────────────┤
-│  ████████████████████████████████  80% LP    │  → Meteora DAMM v2, LP locked to PDA
-│  ██████                            15% BBK   │  → Buyback treasury, accumulates
-│  ██                                 5% PLT   │  → Platform revenue
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│         BONDING RESERVE: 100 SOL                 │
+├──────────────────────────────────────────────────┤
+│  ████████████████████████████████  80% LP        │  → Meteora DAMM v2, LP locked to PDA
+│  ███████                           19% + tax     │  → Buyback treasury (+ accumulated 24% sell tax)
+│                                     1% PLT       │  → Platform revenue
+└──────────────────────────────────────────────────┘
 ```
 
-After migration, **Meteora LP fees** continue to accrue and are claimable by the program:
+**Presale migration:**
 
 ```
-LP Fee Accrual  ────►  claim_lp_fees()  ────►  ┌─ 80% to LP holders
-                                               ├─ 15% to buyback treasury
-                                               └─  5% to platform
+┌──────────────────────────────────────────────────┐
+│         PRESALE RESERVE: 100 SOL                 │
+├──────────────────────────────────────────────────┤
+│  ████████                          20% LP        │  → Meteora DAMM v2, LP locked to PDA
+│  ████████                          20% CRT       │  → Creator wallet
+│  ████████████████████████          59% BBK       │  → Buyback treasury
+│                                     1% PLT       │  → Platform revenue
+└──────────────────────────────────────────────────┘
 ```
+
+The **bonding split** prioritizes deep liquidity — 80% goes to LP. The buyback treasury also inherits all accumulated 24% sell tax from the curve phase, so it usually comes in larger than the headline 19%.
+
+The **presale split** rewards the creator (20%) and front-loads the buyback treasury (59%) for sustained post-launch buying pressure. Less LP, but presale tokens enter with locked supply already distributed.
+
+### Buyback flow
+
+Treasury accumulation does nothing on its own. The contract converts it to value via `execute_buyback()`:
+
+```
+treasury SOL  ───►  market buy on the pool  ───►  tokens to PDA  ───►  burn()
+```
+
+Permissionless — anyone can call it. Off-chain crank bot will run it automatically post-mainnet, but the contract doesn't depend on any privileged caller.
 
 ### Presale modes
 
@@ -260,7 +283,7 @@ Two Anchor programs, deployed as one combined program ID for simpler client inte
 | `sell_bonding` | User trades tokens for SOL, 1% fee + 24% sell tax to buyback treasury |
 | `migrate_to_meteora` | At 100 SOL reserve, atomically moves liquidity to Meteora DAMM v2 |
 | `execute_buyback` | Permissionless crank — anyone can call to spend buyback treasury |
-| `claim_lp_fees` | Claims accrued Meteora fees, distributes 80/15/5 |
+| `claim_lp_fees` | Claims accrued Meteora trading fees from the locked LP position |
 
 ### Constraints enforced on-chain
 
@@ -441,7 +464,7 @@ A: Treasury accumulates. Anyone can call it permissionlessly — there's no priv
 A: No. The LP NFT from Meteora migration is locked to a program PDA at the moment of migration. The program has no instruction to transfer it out. The only thing that can be claimed are the trading fees.
 
 **Q: What's the platform fee?**
-A: 1% of every trade (buy and sell), plus 5% of migration reserve, plus 5% of post-migration LP fees. No hidden fees. No mint tax. No deploy fee beyond Solana rent.
+A: 1% of every trade (buy and sell), plus 1% of the migration reserve. No mint tax. No deploy fee beyond Solana rent. The rest of the migration reserve is split between Meteora LP, creator (presale only), and buyback treasury — see the [tokenomics section](#-tokenomics) for exact percentages per launch type.
 
 ---
 
