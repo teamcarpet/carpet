@@ -17,7 +17,7 @@
 
 import { getToken } from '../../platform.js';
 
-const API_ROOT = 'https://api.carpet.fun';
+const API_ROOT = 'http://localhost:3000';
 
 export async function fetchTokenInfo(mint) {
   // Start from local store — always available.

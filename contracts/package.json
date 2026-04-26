@@ -1,0 +1,19 @@
+{
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5"
+  },
+  "scripts": {
+    "keeper:dry-run": "DRY_RUN=1 node scripts/keeper_claim_lp_fees.js",
+    "keeper:run": "node scripts/keeper_claim_lp_fees.js"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@meteora-ag/cp-amm-sdk": "^1.4.2",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "bn.js": "^5.2.3"
+  }
+}

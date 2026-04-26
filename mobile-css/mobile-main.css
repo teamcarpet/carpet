@@ -174,13 +174,34 @@
     gap: 8px !important;
     background: transparent !important;
     padding: 8px !important;
+    /* Let cols grow naturally; no internal scroll on mobile */
+    min-height: 0 !important;
+    flex: none !important;
+  }
+
+  /* CRITICAL FIX — let the page scroll naturally on mobile.
+     Desktop has flex:1 + internal overflow on col-body so columns
+     scroll independently. On mobile that traps the page scroll and
+     hides the footer "below the fold". Force native page scroll. */
+  #home-view {
+    flex: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .col {
-    min-height: 280px;
+    min-height: auto !important;
+    flex: none !important;
   }
+
   .col-body {
-    max-height: 380px;
+    /* Was: flex:1; overflow-y:auto; max-height:380px
+       That trapped scroll inside each column. On mobile we want
+       the whole page to scroll, not individual columns. */
+    flex: none !important;
+    overflow-y: visible !important;
+    max-height: none !important;
   }
 
   /* ───── Carousel ───── */
@@ -238,11 +259,13 @@
   .igv { font-size: 11px !important; }
   .mcard { padding: 14px !important; }
 
-  /* ───── Footer — clean stacked layout ───── */
+  /* ───── Footer — compact stacked layout ───── */
   #footer {
+    display: flex !important;
+    flex-direction: column !important;
     grid-template-columns: 1fr !important;
-    gap: 14px !important;
-    padding: 18px 16px !important;
+    gap: 10px !important;
+    padding: 14px 16px 18px !important;
     text-align: center;
   }
   .foot-l,
@@ -251,24 +274,32 @@
     align-items: center !important;
     text-align: center !important;
     width: 100%;
+    margin: 0 !important;
   }
+
   .foot-l {
     align-items: center !important;
+    gap: 4px !important;
   }
   .foot-brand {
     justify-content: center !important;
+    font-size: 13px !important;
   }
   .foot-tagline {
     text-align: center !important;
+    font-size: 9px !important;
+    margin: 0 !important;
   }
-  /* Links — горизонтальный ряд с разделителями · */
+
+  /* Links row — compact horizontal */
   .foot-links {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
-    gap: 4px 12px !important;
+    gap: 3px 10px !important;
     width: 100%;
+    margin: 0 !important;
   }
   .foot-lnk {
     white-space: nowrap !important;
@@ -276,16 +307,26 @@
     padding: 0 !important;
     border: none !important;
   }
-  /* Right side — social icons in a row */
+
+  /* Socials + MAINNET pill — single row, centered */
   .foot-r {
     display: flex !important;
     flex-direction: row !important;
     justify-content: center !important;
-    gap: 12px !important;
+    align-items: center !important;
+    gap: 10px !important;
     flex-wrap: wrap !important;
   }
   .foot-status {
-    margin-right: 8px;
+    margin-right: 6px !important;
+    font-size: 10px !important;
+  }
+  .foot-social {
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* ───── Notification ───── */

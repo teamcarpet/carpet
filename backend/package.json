@@ -1,0 +1,27 @@
+{
+  "name": "carpet-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CARPET launchpad backend — indexer, API, WebSocket",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "shared",
+    "indexer",
+    "api",
+    "ws"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:indexer": "npm --workspace indexer run dev",
+    "dev:api":     "npm --workspace api run dev",
+    "dev:ws":      "npm --workspace ws run dev",
+    "db:migrate":  "npm --workspace shared run db:migrate",
+    "db:generate": "npm --workspace shared run db:generate",
+    "infra:up":    "docker compose up -d",
+    "infra:down":  "docker compose down",
+    "infra:logs":  "docker compose logs -f"
+  }
+}

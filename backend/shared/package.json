@@ -1,0 +1,36 @@
+{
+  "name": "@carpet/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".":          "./src/index.ts",
+    "./db":       "./src/db/client.ts",
+    "./schema":   "./src/db/schema.ts",
+    "./env":      "./src/env.ts",
+    "./logger":   "./src/logger.ts",
+    "./redis":    "./src/redis.ts",
+    "./types":    "./src/types.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate":  "tsx src/db/migrate.ts",
+    "db:push":     "drizzle-kit push --config drizzle.config.ts"
+  },
+  "dependencies": {
+    "dotenv":      "^16.4.5",
+    "drizzle-orm": "^0.36.0",
+    "ioredis":     "^5.4.1",
+    "pino":        "^9.5.0",
+    "pino-pretty": "^11.2.2",
+    "postgres":    "^3.4.5",
+    "zod":         "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "drizzle-kit": "^0.28.0",
+    "tsx":         "^4.19.0",
+    "typescript":  "^5.6.3"
+  }
+}

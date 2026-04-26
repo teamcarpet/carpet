@@ -107,6 +107,12 @@ export function toggleSb() {
 
 // ── Views ────────────────────────────────────────────────────────────────────
 export function setView(v) {
+  // Hide token detail mount (used by openDet) when switching to a top-level view
+  const tdMount = document.getElementById('td-mount');
+  if (tdMount) tdMount.style.display = 'none';
+  // Also unmount the token detail to clean up its WS / fetchers
+  try { unmountTokenDetail(); } catch {}
+
   ['home', 'bubble', 'profile'].forEach(id => {
     const el = document.getElementById(id + '-view');
     if (el) el.style.display = id === v ? 'flex' : 'none';

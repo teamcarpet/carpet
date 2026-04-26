@@ -1,0 +1,17 @@
+.anchor
+target/debug/
+target/release/
+target/deploy/
+target/sbpf-*/
+target/sbf-*/
+target/.rustc_info.json
+target/CACHEDIR.TAG
+target/*.json.lock
+target/vanity-mints/
+programs/*/target/
+node_modules/
+.DS_Store
+*.log
+.env
+!target/idl/
+!target/types/

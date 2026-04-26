@@ -16,6 +16,11 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
+/* Profile tabs */
+.pf-tab{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;white-space:nowrap;user-select:none}
+.pf-tab:hover{color:var(--text)}
+.pf-tab.on{color:var(--red);border-bottom-color:var(--red)}
+
 :root{
   --bg:#0B0F18;--bg-2:#0F1422;--bg-3:#131826;--bg-4:#1B2136;
   --surface:#121726;--surface-hi:#1A2034;
@@ -439,7 +444,6 @@ body.sb-open #main{margin-left:180px}
       <div class="hdr-search">
         <iconify-icon icon="solar:magnifer-bold" style="font-size:13px;"></iconify-icon>
         <input type="text" placeholder="SEARCH TOKENS..." oninput="filterSearch(this.value)">
-        <span class="hdr-kbd">⌘K</span>
       </div>
     </div>
     <div class="hdr-mid">
@@ -541,13 +545,11 @@ body.sb-open #main{margin-left:180px}
           <div class="foot-lnk">Docs</div>
           <div class="foot-lnk">API</div>
         </div>
-        <div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.5px;">© 2026 · BUILT ON SOLANA</div>
       </div>
       <div class="foot-r">
         <div class="foot-status"><div class="dot"></div>MAINNET</div>
         <a class="foot-social" href="#" title="Twitter"><iconify-icon icon="ri:twitter-x-fill"></iconify-icon></a>
-        <a class="foot-social" href="#" title="Telegram"><iconify-icon icon="ri:telegram-fill"></iconify-icon></a>
-        <a class="foot-social" href="#" title="Discord"><iconify-icon icon="ri:discord-fill"></iconify-icon></a>
+        <a class="foot-social" href="#" title="GitHub"><iconify-icon icon="ri:github-fill"></iconify-icon></a>
         <a class="foot-social" href="#" title="Docs"><iconify-icon icon="solar:document-text-bold"></iconify-icon></a>
       </div>
     </div>

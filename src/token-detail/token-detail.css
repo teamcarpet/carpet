@@ -281,7 +281,8 @@
   border-radius: 10px;
   overflow: hidden;
 }
-.td-chart {
+.td-chart,
+#td-chart-mount {
   position: absolute;
   inset: 0;
 }
@@ -666,6 +667,13 @@
   color: var(--dim);
 }
 
+/* Chart slot — host for ChartEmbed. Must have explicit height. */
+#td-chart-slot {
+  height: 460px;
+  min-height: 460px;
+  flex-shrink: 0;
+}
+
 /* ───── Mobile (desktop-first; this just keeps it from breaking) ───── */
 @media (max-width: 1100px) {
   .td-layout {
@@ -691,4 +699,6 @@
   .td-trades-row > div:nth-child(4),
   .td-trades-row > div:nth-child(6) { display: none; }
   .td-chart-wrap { height: 320px; }
+
+  
 }

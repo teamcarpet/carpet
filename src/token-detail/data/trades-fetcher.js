@@ -11,7 +11,8 @@
 //   WS wss://api.carpet.fun/trades-stream?mint=X&minSol=0.05
 //     → server pushes { type: 'trade', trade: {...} } for each new trade.
 
-const API_ROOT = 'https://api.carpet.fun';
+const API_ROOT = 'http://localhost:3000';
+const WS_ROOT = 'ws://localhost:3001';
 
 export async function fetchTrades({ mint, limit = 100, minSol = 0 }) {
   try {
@@ -37,7 +38,7 @@ export function subscribeTrades({ mint, minSol = 0, onTrade, onOpen, onClose }) 
 
   const connect = () => {
     if (closed) return;
-    const url = `${API_ROOT.replace(/^http/, 'ws')}/trades-stream?mint=${mint}${minSol ? `&minSol=${minSol}` : ''}`;
+    const url = `${WS_ROOT}/trades-stream?mint=${mint}${minSol ? `&minSol=${minSol}` : ''}`;
     try {
       ws = new WebSocket(url);
     } catch {

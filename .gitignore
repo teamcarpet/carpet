@@ -15,7 +15,6 @@ out/
 .env.development
 
 # Solana / blockchain artifacts
-target/
 .anchor/
 **/Cargo.lock.bak
 test-ledger/

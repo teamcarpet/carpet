@@ -16,7 +16,8 @@
 // Until the backend exists fetchCandles returns [] and subscribeCandles is a no-op.
 // No hardcoded data. No fake bars. Empty = empty.
 
-const API_ROOT = 'https://api.carpet.fun';
+const API_ROOT = 'http://localhost:3000';
+const WS_ROOT  = 'ws://localhost:3001';
 
 // ── REST ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export function subscribeCandles({ subscriberUID, mint, resolution, priceMode, o
   const maxRetries = 5;
 
   const connect = () => {
-    const url = `${API_ROOT.replace(/^http/, 'ws')}/stream?mint=${mint}&resolution=${resolution}&priceMode=${priceMode}`;
+    const url = `${WS_ROOT}/stream?mint=${mint}&resolution=${resolution}&priceMode=${priceMode}`;
     let ws;
     try {
       ws = new WebSocket(url);

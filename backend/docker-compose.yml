@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Local development infrastructure: Postgres+TimescaleDB and Redis.
+# Run: docker compose up -d
+#      (or `npm run infra:up` from project root)
+#
+# Data persists in named volumes so you can restart containers without
+# losing trades/candles. To wipe: `docker compose down -v`
+# ─────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: carpet-postgres
+    environment:
+      POSTGRES_USER:     carpet
+      POSTGRES_PASSWORD: carpet
+      POSTGRES_DB:       carpet
+    ports:
+      - "5432:5432"
+    volumes:
+      - carpet_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carpet"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: carpet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - carpet_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  carpet_pg_data:
+  carpet_redis_data:

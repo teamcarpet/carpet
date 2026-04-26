@@ -1,0 +1,29 @@
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY shared/package.json   ./shared/package.json
+COPY indexer/package.json  ./indexer/package.json
+COPY api/package.json      ./api/package.json
+COPY ws/package.json       ./ws/package.json
+RUN npm ci
+
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/shared/node_modules ./shared/node_modules
+COPY --from=deps /app/ws/node_modules     ./ws/node_modules
+COPY tsconfig.base.json ./
+COPY shared ./shared
+COPY ws     ./ws
+RUN npm --workspace @carpet/ws run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/node_modules        ./node_modules
+COPY --from=build /app/shared              ./shared
+COPY --from=build /app/ws/dist             ./ws/dist
+COPY --from=build /app/ws/package.json     ./ws/package.json
+WORKDIR /app/ws
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
