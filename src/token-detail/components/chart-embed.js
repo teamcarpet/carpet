@@ -1,18 +1,15 @@
 // src/token-detail/components/chart-embed.js
 // Lightweight Charts wrapper for token price/mcap visualization.
-//
-// Connects to the Carpet indexer via candles-fetcher and subscribes to
-// real-time bar updates over WS. Switches between Price and MCap modes
-// transparently — datafeed re-fetches with the appropriate priceMode.
 
-import { createChart, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, HistogramSeries, createSeriesMarkers } from 'lightweight-charts';
 import { fetchCandles, subscribeCandles, unsubscribeCandles } from '../data/candles-fetcher.js';
+import { fetchTrades } from '../data/trades-fetcher.js';
 
 const COLOR = {
-  up:           '#22ab94',     // pump.fun teal-green
-  down:         '#f23645',     // pump.fun coral-red
+  up:           '#22ab94',
+  down:         '#f23645',
   bg:           'transparent',
-  text:         '#b2b5be',     // brighter text for axis
+  text:         '#b2b5be',
   grid:         'rgba(255,255,255,0.04)',
   border:       'rgba(255,255,255,0.08)',
   volumeUp:     'rgba(34,171,148,0.55)',
@@ -20,16 +17,18 @@ const COLOR = {
 };
 
 export class ChartEmbed {
-  constructor(host, { mint }) {
-    this.host        = host;
-    this.mint        = mint;
-    this.resolution  = '1';
-    this.priceMode   = 'mcap';
-    this.subUID      = `chart-${mint}-${Date.now()}`;
-    this.chart       = null;
+  constructor(host, { mint, creator }) {
+    this.host         = host;
+    this.mint         = mint;
+    this.creator      = creator || null;
+    this.resolution   = '1';
+    this.priceMode    = 'mcap';
+    this.subUID       = `chart-${mint}-${Date.now()}`;
+    this.chart        = null;
     this.candleSeries = null;
     this.volumeSeries = null;
-    this._resizeObs  = null;
+    this.markersApi   = null;
+    this._resizeObs   = null;
 
     this._render();
     this._initChart();
@@ -52,6 +51,15 @@ export class ChartEmbed {
   destroy() {
     unsubscribeCandles(this.subUID);
     if (this._resizeObs) this._resizeObs.disconnect();
+    if (this.markersApi) {
+      try { this.markersApi.detach(); } catch {}
+      this.markersApi = null;
+    }
+       if (this._tooltipEl) {
+      this._tooltipEl.remove();
+      this._tooltipEl = null;
+    }
+    this._devMarkerData = null;
     if (this.chart) this.chart.remove();
     this.chart = null;
     this.candleSeries = null;
@@ -76,35 +84,35 @@ export class ChartEmbed {
     if (!mount) return;
 
     this.chart = createChart(mount, {
-  layout: {
-    background: { color: COLOR.bg },
-    textColor:  COLOR.text,
-    fontSize:   12,
-    fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-  },
-  grid: {
-    vertLines: { color: COLOR.grid },
-    horzLines: { color: COLOR.grid },
-  },
-  timeScale: {
-    borderColor: COLOR.border,
-    timeVisible: true,
-    secondsVisible: false,
-    barSpacing: 8,             // wider candles, like pump.fun
-    minBarSpacing: 4,
-    rightOffset: 8,
-  },
-  rightPriceScale: {
-    borderColor: COLOR.border,
-    scaleMargins: { top: 0.08, bottom: 0.28 },  // give volume more room at bottom
-  },
-  crosshair: {
-    mode: 1,
-    vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 3 },
-    horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 3 },
-  },
-  autoSize: true,
-});
+      layout: {
+        background: { color: COLOR.bg },
+        textColor:  COLOR.text,
+        fontSize:   12,
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+      },
+      grid: {
+        vertLines: { color: COLOR.grid },
+        horzLines: { color: COLOR.grid },
+      },
+      timeScale: {
+        borderColor: COLOR.border,
+        timeVisible: true,
+        secondsVisible: false,
+        barSpacing: 8,
+        minBarSpacing: 4,
+        rightOffset: 8,
+      },
+      rightPriceScale: {
+        borderColor: COLOR.border,
+        scaleMargins: { top: 0.08, bottom: 0.28 },
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 3 },
+        horzLine: { color: 'rgba(255,255,255,0.2)', width: 1, style: 3 },
+      },
+      autoSize: true,
+    });
 
     this.candleSeries = this.chart.addSeries(CandlestickSeries, {
       upColor:        COLOR.up,
@@ -115,17 +123,15 @@ export class ChartEmbed {
       wickDownColor:  COLOR.down,
     });
 
-    // Volume as a histogram in its own scale at the bottom 25%
     this.volumeSeries = this.chart.addSeries(HistogramSeries, {
-  priceFormat:  { type: 'volume' },
-  priceScaleId: 'vol',
-});
-this.chart.priceScale('vol').applyOptions({
-  scaleMargins: { top: 0.75, bottom: 0 },
-  borderVisible: false,
-});
+      priceFormat:  { type: 'volume' },
+      priceScaleId: 'vol',
+    });
+    this.chart.priceScale('vol').applyOptions({
+      scaleMargins: { top: 0.75, bottom: 0 },
+      borderVisible: false,
+    });
 
-    // Resize chart when host changes size
     this._resizeObs = new ResizeObserver(() => {
       if (!this.chart) return;
       this.chart.applyOptions({ width: mount.clientWidth, height: mount.clientHeight });
@@ -137,10 +143,8 @@ this.chart.priceScale('vol').applyOptions({
     const status = this.host.querySelector('#td-chart-status');
     if (status) status.style.display = 'flex';
 
-    // Drop any previous subscription before reloading data
     unsubscribeCandles(this.subUID);
 
-    // Fetch a window of historical bars: last 24h roughly, capped at 500.
     const to   = Math.floor(Date.now() / 1000);
     const from = to - 24 * 3600;
     const bars = await fetchCandles({
@@ -154,7 +158,6 @@ this.chart.priceScale('vol').applyOptions({
     if (!this.candleSeries || !this.volumeSeries) return;
 
     if (bars.length === 0) {
-      // Show "no data" rather than an empty chart with no scale
       if (status) {
         status.innerHTML = `<div style="font-size:13px;color:var(--muted);letter-spacing:1px;">No price data yet</div>`;
       }
@@ -163,7 +166,6 @@ this.chart.priceScale('vol').applyOptions({
       return;
     }
 
-    // Lightweight Charts expects ascending time order
     const sorted = [...bars].sort((a, b) => a.time - b.time);
 
     this.candleSeries.setData(sorted.map(b => ({
@@ -182,10 +184,8 @@ this.chart.priceScale('vol').applyOptions({
 
     if (status) status.style.display = 'none';
 
-    // Auto-fit viewport to data
     this.chart.timeScale().fitContent();
 
-    // Live updates via WS — server pushes one bar at a time
     subscribeCandles({
       subscriberUID: this.subUID,
       mint:          this.mint,
@@ -193,6 +193,8 @@ this.chart.priceScale('vol').applyOptions({
       priceMode:     this.priceMode,
       onTick:        (bar) => this._applyTick(bar),
     });
+
+    this._loadDevMarkers();
   }
 
   _applyTick(bar) {
@@ -214,5 +216,141 @@ this.chart.priceScale('vol').applyOptions({
         color: bar.close >= bar.open ? COLOR.volumeUp : COLOR.volumeDown,
       });
     }
+  }
+
+  // ── Dev (creator) trade markers ─────────────────────────────────────────
+// ── Dev (creator) trade markers ─────────────────────────────────────────
+  async _loadDevMarkers() {
+    if (!this.candleSeries) return;
+
+    try {
+      const trades = await fetchTrades({ mint: this.mint, limit: 500 });
+      // TEMP: pretend MockWallet02 is the creator (revert before commit)
+      const fakeCreator = 'MockWallet02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+      const devTrades = trades.filter(t => t.account === fakeCreator);
+      if (!devTrades.length) return;
+
+      // Group by candle bucket (resolution-aware) and side, so we don't
+      // stack multiple markers on the same candle.
+      const bucketSec = this._bucketSeconds();
+      const groups = new Map();
+      for (const t of devTrades) {
+        const bucket = Math.floor(t.timestamp / bucketSec) * bucketSec;
+        const key = `${bucket}-${t.side}`;
+        const g = groups.get(key) || {
+          time: bucket,
+          side: t.side,
+          totalSol: 0,
+          totalToken: 0,
+          mcAtTime: t.marketCap || 0,
+          count: 0,
+        };
+        g.totalSol   += Number(t.amountSol)   || 0;
+        g.totalToken += Number(t.amountToken) || 0;
+        g.count      += 1;
+        groups.set(key, g);
+      }
+
+      // Save grouped data for tooltip lookup
+      this._devMarkerData = new Map();
+      const markers = [];
+      for (const g of groups.values()) {
+        const key = `${g.time}-${g.side}`;
+        this._devMarkerData.set(key, g);
+        markers.push({
+          time:     g.time,
+          position: g.side === 'buy' ? 'belowBar' : 'aboveBar',
+          color:    g.side === 'buy' ? COLOR.up : COLOR.down,
+          shape:    'circle',
+          text:     g.side === 'buy' ? 'DB' : 'DS',
+          size:     1.2,
+        });
+      }
+
+      // Sort by time ascending (Lightweight Charts requires this)
+      markers.sort((a, b) => a.time - b.time);
+
+      if (this.markersApi) {
+        this.markersApi.setMarkers(markers);
+      } else {
+        this.markersApi = createSeriesMarkers(this.candleSeries, markers);
+      }
+
+      this._initDevTooltip();
+    } catch (err) {
+      console.warn('[chart] dev markers failed:', err.message);
+    }
+  }
+
+  _bucketSeconds() {
+    // Map resolution string to seconds
+    const map = { '1': 60, '5': 300, '15': 900, '60': 3600, '240': 14400, '1D': 86400 };
+    return map[this.resolution] || 60;
+  }
+
+  _initDevTooltip() {
+    if (this._tooltipEl) return;          // already initialized
+    if (!this.host || !this.chart) return;
+
+    const tip = document.createElement('div');
+    tip.style.cssText = `
+      position: absolute;
+      pointer-events: none;
+      z-index: 1000;
+      background: rgba(11, 15, 24, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #eef0f5;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      transform: translate(-50%, -110%);
+      display: none;
+      backdrop-filter: blur(6px);
+    `;
+    this.host.querySelector('.td-chart-wrap').appendChild(tip);
+    this._tooltipEl = tip;
+
+    this.chart.subscribeCrosshairMove(param => {
+      if (!param || !param.time || !this._devMarkerData) {
+        tip.style.display = 'none';
+        return;
+      }
+
+      // Look up marker at this time, both sides
+      const buyKey  = `${param.time}-buy`;
+      const sellKey = `${param.time}-sell`;
+      const data = this._devMarkerData.get(buyKey) || this._devMarkerData.get(sellKey);
+      if (!data) {
+        tip.style.display = 'none';
+        return;
+      }
+
+      // Format: "Dev bought 0.45 SOL · $4K MCap"
+      const verb = data.side === 'buy' ? 'bought' : 'sold';
+      const sol  = data.totalSol.toFixed(3);
+      const mc   = this._fmtUsd(data.mcAtTime);
+      const cnt  = data.count > 1 ? ` (${data.count} trades)` : '';
+      tip.innerHTML = `
+        <div style="color:${data.side === 'buy' ? COLOR.up : COLOR.down};font-weight:700;">
+          Dev ${verb}${cnt}
+        </div>
+        <div style="margin-top:3px;color:#b2b5be;">${sol} SOL · ${mc} MCap</div>
+      `;
+
+      tip.style.display = 'block';
+      tip.style.left = `${param.point.x}px`;
+      tip.style.top  = `${param.point.y}px`;
+    });
+  }
+
+  _fmtUsd(v) {
+    if (!v || v < 1) return '$0';
+    if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+    return `$${Math.round(v)}`;
   }
 }
