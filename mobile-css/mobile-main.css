@@ -389,4 +389,152 @@
     min-width: 200px !important;
     width: 200px !important;
   }
+  /* ─────────────────────────────────────────────────────────────────────
+   Mobile readability boost — investor feedback April 2026
+   Bumps base font sizes site-wide on mobile so text is legible against
+   the bright neon palette. Applied late so it overrides earlier rules.
+   ───────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Base body text */
+  body {
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  /* Tighten letter-spacing globally — was making mono fonts feel narrower */
+  body, .mono, [class*="mono"] {
+    letter-spacing: 0.2px !important;
+  }
+
+  /* ── Headers / section titles ── */
+  .col-name,
+  .sk-title,
+  .td-trades-title,
+  .td-chat-title,
+  .td-holders-head span,
+  .col-title {
+    font-size: 14px !important;
+    letter-spacing: 1px !important;
+  }
+
+  .sk-kick,
+  .col-count {
+    font-size: 11px !important;
+    letter-spacing: 1.5px !important;
+  }
+
+  /* ── Token rows in columns ── */
+  .tr-name { font-size: 14px !important; }
+  .tr-tk { font-size: 12px !important; }
+  .tr-pct { font-size: 14px !important; }
+  .tr-meta { font-size: 11px !important; }
+  .tr-meta b { font-size: 12px !important; }
+  .tr-age { font-size: 11px !important; }
+  .tr-prog-pct { font-size: 11px !important; }
+
+  /* ── Carousel cards ── */
+  .ccard-rank { font-size: 10px !important; letter-spacing: 1.5px !important; }
+  .ccard-name { font-size: 13px !important; }
+  .ccard-tk { font-size: 12px !important; }
+  .ccard-pct { font-size: 14px !important; }
+  .ccard-mcl,
+  .ccard-voll { font-size: 10px !important; letter-spacing: 1.2px !important; }
+  .ccard-mcv,
+  .ccard-volv { font-size: 12px !important; }
+
+  /* ── Header / search ── */
+  .hdr-search input { font-size: 14px !important; }
+  .hs-lbl { font-size: 11px !important; letter-spacing: 1px !important; }
+  .hs-val { font-size: 13px !important; }
+  .hs-live { font-size: 12px !important; letter-spacing: 1.5px !important; }
+
+  /* ── Buttons ── */
+  .btn { font-size: 13px !important; padding: 10px 16px !important; }
+  .btn-sm { font-size: 12px !important; padding: 8px 12px !important; }
+  .btn-lg { font-size: 14px !important; padding: 13px 22px !important; }
+  .cf { font-size: 12px !important; padding: 7px 12px !important; letter-spacing: 0.8px !important; }
+
+  /* ── Sidebar ── */
+  #sb .sbi-lbl { font-size: 12px !important; letter-spacing: 1px !important; }
+  .logo-text { font-size: 16px !important; letter-spacing: 2px !important; }
+
+  /* ── Modals: form labels / hints / table cells ── */
+  .fl { font-size: 12px !important; letter-spacing: 0.8px !important; }
+  .fi, .fsel, .fta { font-size: 14px !important; padding: 12px 14px !important; }
+  .fhnt { font-size: 11px !important; }
+  .fstit { font-size: 12px !important; letter-spacing: 1.5px !important; }
+  .step { font-size: 11px !important; padding: 11px 8px !important; letter-spacing: 1px !important; }
+  .mn2 { font-size: 14px !important; }
+  .md { font-size: 12px !important; line-height: 1.6 !important; }
+  .igr,
+  .igk,
+  .igv { font-size: 13px !important; }
+
+  /* ── Footer ── */
+  .foot-brand { font-size: 14px !important; letter-spacing: 2px !important; }
+  .foot-brand-dim { font-size: 11px !important; letter-spacing: 1px !important; }
+  .foot-tagline { font-size: 11px !important; }
+  .foot-lnk { font-size: 11px !important; padding: 6px 10px !important; letter-spacing: 0.8px !important; }
+  .foot-status { font-size: 10px !important; padding: 5px 12px !important; }
+
+  /* ── Ticker ── */
+  .ticker-inner { font-size: 13px !important; }
+
+  /* ── Wallet menu ── */
+  .wm-addr { font-size: 12px !important; }
+  .wm-addr .wm-bal { font-size: 11px !important; }
+  .wm-item { font-size: 13px !important; padding: 12px 14px !important; }
+  .wm-item iconify-icon { font-size: 16px !important; }
+
+  /* ── Big numbers stay loud ── */
+  .td-market-value { font-size: 32px !important; letter-spacing: -0.5px !important; }
+  .td-market-change { font-size: 14px !important; }
+  .prev-name { font-size: 18px !important; }
+  .prev-tk { font-size: 13px !important; }
+  .prev-desc { font-size: 12px !important; line-height: 1.55 !important; }
+  .prev-stl { font-size: 10px !important; letter-spacing: 1.2px !important; }
+  .prev-stv { font-size: 13px !important; }
+
+  /* ── Trades table ── */
+  .td-trades-grid-head { font-size: 11px !important; letter-spacing: 1px !important; }
+  .td-trades-row { font-size: 13px !important; }
+
+  /* ── Bonding panel ── */
+  .td-bonding-title { font-size: 11px !important; letter-spacing: 1px !important; }
+  .td-bonding-pct { font-size: 14px !important; }
+  .td-bonding-sub { font-size: 12px !important; }
+
+  /* ── Trade panel ── */
+  .td-trade-tab { font-size: 14px !important; padding: 11px !important; }
+  .td-trade-row { font-size: 12px !important; margin-bottom: 10px !important; }
+  .td-trade-input { font-size: 17px !important; padding: 14px 60px 14px 16px !important; }
+  .td-trade-unit { font-size: 12px !important; }
+  .td-trade-q { font-size: 11px !important; padding: 8px 4px !important; }
+  .td-trade-submit { font-size: 14px !important; padding: 14px !important; }
+  .td-trade-info { font-size: 11px !important; }
+
+  /* ── Top holders ── */
+  .td-holders-rank { font-size: 11px !important; }
+  .td-holders-addr { font-size: 12px !important; }
+  .td-holders-pct { font-size: 12px !important; }
+
+  /* ── Chat ── */
+  .td-chat-status { font-size: 11px !important; }
+  .td-chat-empty { font-size: 12px !important; }
+  .td-chat-empty small { font-size: 11px !important; }
+  .td-chat-join { font-size: 13px !important; padding: 10px 18px !important; }
+
+  /* ── Profile tabs ── */
+  .pf-tab { font-size: 13px !important; padding: 13px 16px !important; letter-spacing: 1px !important; }
+}
+
+/* Small phones — bring it down a touch (still > current values) */
+@media (max-width: 380px) {
+  .tr-name { font-size: 13px !important; }
+  .tr-pct { font-size: 13px !important; }
+  .ccard-name { font-size: 12px !important; }
+  .ccard-pct { font-size: 13px !important; }
+  .td-market-value { font-size: 28px !important; }
+}
 }
