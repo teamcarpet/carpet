@@ -10,8 +10,6 @@ RUN npm ci
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/shared/node_modules ./shared/node_modules
-COPY --from=deps /app/ws/node_modules     ./ws/node_modules
 COPY tsconfig.base.json ./
 COPY shared ./shared
 COPY ws     ./ws
