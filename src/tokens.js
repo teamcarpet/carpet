@@ -20,6 +20,7 @@ export async function createToken({
   imageFile, website, twitter, telegram,
   decimals = 6, supply = 1_000_000_000,
   mode = 'bonding',
+  presaleMode = 0,
 }) {
   const creator = getPublicKey();
   if (!creator) throw new Error('Wallet not connected');

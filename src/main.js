@@ -35,7 +35,7 @@ let searchQ = '';
 let swapTokenIn = null, swapTokenOut = null;
 let swapQuote = null;
 let imageFileGlobal = null;
-let selM = null, fData = {};
+let selM = null, presaleM = 0, fData = {};
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 function fm(n) { if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K'; return '$' + n; }
@@ -464,6 +464,7 @@ export async function doLaunch() {
       twitter: document.getElementById('f-twt')?.value || '',
       telegram: document.getElementById('f-tg')?.value || '',
       mode: selM || 'bonding',
+      presaleMode: presaleM,
     });
     stepUI(4); showOnly('lsuccess');
     document.getElementById('suc-sub').textContent = `// $${fData.tick} is live · ${result.mint.slice(0, 8)}...`;
@@ -484,8 +485,22 @@ function buildForm(mode) {
       <div class="igr"><span class="igk">Buy Fee</span><span class="igv">1%</span></div>
       <div class="igr"><span class="igk">Sell</span><span class="igv">${bc ? '1%+24%→buyback' : 'No sell pre-mig'}</span></div>
     </div>
-    <div class="fstit">Identity</div>
+${bc ? '' : `
+    <div class="fstit">Buyback Mode</div>
     <div class="frow">
+      <div class="ff" style="cursor:pointer;" id="pm-reg" onclick="window._app.selPresaleMode(0)">
+        <div style="padding:14px;border:1px solid var(--red-bdr);border-radius:6px;background:var(--bg);transition:all .15s;" class="pm-card">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Regular</div>
+<div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5;">6 rounds × 10%<br>Every 4h · 24h cycle<br>Steady pump</div>        </div>
+      </div>
+      <div class="ff" style="cursor:pointer;" id="pm-ext" onclick="window._app.selPresaleMode(1)">
+        <div style="padding:14px;border:1px solid var(--red-bdr);border-radius:6px;background:var(--bg);transition:all .15s;" class="pm-card">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Extreme</div>
+<div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5;">12 rounds × 5%<br>Every 30min · 6h cycle<br>Aggressive pump</div>        </div>
+      </div>
+    </div>
+    `}
+    <div class="fstit">Identity</div>    <div class="frow">
       <div class="ff"><label class="fl">Name *</label><input class="fi" id="f-name" placeholder="Red Carpet Inu" maxlength="32"></div>
       <div class="ff"><label class="fl">Ticker *</label><input class="fi" id="f-tick" placeholder="RCINU" maxlength="8" style="text-transform:uppercase"></div>
     </div>
@@ -510,6 +525,13 @@ function buildForm(mode) {
     </div>`;
 }
 
+export function selPresaleMode(m) {
+  presaleM = m;
+  const reg = document.querySelector('#pm-reg .pm-card');
+  const ext = document.querySelector('#pm-ext .pm-card');
+  if (reg) { reg.style.borderColor = m === 0 ? 'var(--red)' : 'var(--red-bdr)'; reg.style.boxShadow = m === 0 ? '0 0 12px var(--red-glow)' : 'none'; }
+  if (ext) { ext.style.borderColor = m === 1 ? 'var(--red)' : 'var(--red-bdr)'; ext.style.boxShadow = m === 1 ? '0 0 12px var(--red-glow)' : 'none'; }
+}
 export function previewImage(input) {
   const file = input.files[0]; if (!file) return;
   const url = URL.createObjectURL(file);
@@ -557,7 +579,7 @@ export function init() {
     openDet, 
     openEditToken, closeEditToken, saveEditToken,
     openSwap, closeSwap, flipSwap, cswap, doSwap,
-    openLaunch, closeLaunch, selMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,
+    openLaunch, closeLaunch, selMode, selPresaleMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,
     previewImage,
     pfTab,
     cMove, setColSort, filterSearch,
