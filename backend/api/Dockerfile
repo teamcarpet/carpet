@@ -13,15 +13,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json ./
 COPY shared ./shared
 COPY api    ./api
+RUN npm --workspace @carpet/shared run build
 RUN npm --workspace @carpet/api run build
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/node_modules        ./node_modules
-COPY --from=build /app/shared              ./shared
-COPY --from=build /app/api/dist            ./api/dist
-COPY --from=build /app/api/package.json    ./api/package.json
+COPY --from=build /app/node_modules            ./node_modules
+COPY --from=build /app/shared/dist             ./shared/dist
+COPY --from=build /app/shared/package.json     ./shared/package.json
+COPY --from=build /app/api/dist                ./api/dist
+COPY --from=build /app/api/package.json        ./api/package.json
 WORKDIR /app/api
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

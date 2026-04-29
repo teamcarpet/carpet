@@ -2,11 +2,7 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir":  "./dist",
-    "paths": {
-      "@carpet/shared":      ["../shared/src/index.ts"],
-      "@carpet/shared/*":    ["../shared/src/*"]
-    }
+    "outDir":  "./dist"
   },
   "include": ["src/**/*"]
 }
