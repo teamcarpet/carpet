@@ -13,21 +13,20 @@
 <link rel="stylesheet" href="/mobile-css/mobile-token-detail.css">
 <style>
 /* ── Mobile footer clearance fix ──
-   Ensures .foot-r (MAINNET pill, Twitter, GitHub, Docs icons) is never
-   hidden behind the bottom tab bar on iOS Safari, including during
-   URL-bar show/hide transitions. */
+   The bottom tab bar is fixed at bottom:0. #shell has min-height:100vh,
+   so footer sits at the bottom of the viewport — directly under the
+   tab bar. Fix: shrink shell's min-height by the tab bar's height so
+   the footer naturally lands ABOVE the tab bar. */
 @media (max-width: 768px) {
-  /* Use dynamic viewport so layout follows the visible area, not the
-     "large" 100vh that iOS uses when the URL bar is hidden. */
-  #shell { min-height: 100dvh !important; }
-
-  /* Add real breathing room below the page so the tab bar doesn't
-     touch the last row of the footer. */
-  body {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  #shell {
+    min-height: calc(100dvh - 56px - env(safe-area-inset-bottom, 0px)) !important;
   }
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* A bit of breathing room inside the footer too */
   #footer {
-    padding-bottom: 28px !important;
+    padding-bottom: 22px !important;
   }
 }
 </style>
