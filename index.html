@@ -11,6 +11,26 @@
 <link rel="stylesheet" href="/mobile-css/mobile-main.css">
 <link rel="stylesheet" href="/mobile-css/mobile-bubble.css">
 <link rel="stylesheet" href="/mobile-css/mobile-token-detail.css">
+<style>
+/* ── Mobile footer clearance fix ──
+   Ensures .foot-r (MAINNET pill, Twitter, GitHub, Docs icons) is never
+   hidden behind the bottom tab bar on iOS Safari, including during
+   URL-bar show/hide transitions. */
+@media (max-width: 768px) {
+  /* Use dynamic viewport so layout follows the visible area, not the
+     "large" 100vh that iOS uses when the URL bar is hidden. */
+  #shell { min-height: 100dvh !important; }
+
+  /* Add real breathing room below the page so the tab bar doesn't
+     touch the last row of the footer. */
+  body {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #footer {
+    padding-bottom: 28px !important;
+  }
+}
+</style>
 <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
@@ -414,13 +434,8 @@ body.sb-open #main{margin-left:180px}
 <aside id="sb">
   <div class="sb-top" onclick="toggleSb()">
     <div class="logo-block">
-      <div class="logo-mark">
-        <svg viewBox="0 0 32 32" fill="none">
-          <rect class="lm-border" x="1.5" y="1.5" width="29" height="29" rx="7" stroke="#FF2D2D" stroke-width="1.5" pathLength="100"/>
-          <g class="lm-c">
-            <path d="M21 9 L11 9 L11 23 L21 23 M18 13 L14 13 L14 19 L18 19" stroke="#FF2D2D" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"/>
-          </g>
-        </svg>
+      <div class="logo-mark" style="background:transparent;">
+        <img src="logo.png" alt="CARPET" style="width:100%;height:100%;display:block;object-fit:contain;">
       </div>
       <div class="logo-text">CARPET</div>
     </div>
@@ -527,11 +542,8 @@ body.sb-open #main{margin-left:180px}
     <div id="footer">
       <div class="foot-l">
         <div class="foot-brand">
-          <div class="logo-mark" style="width:26px;height:26px;">
-            <svg viewBox="0 0 32 32" fill="none">
-              <rect class="lm-border" x="1.5" y="1.5" width="29" height="29" rx="7" stroke="#FF2D2D" stroke-width="1.5" pathLength="100"/>
-              <g class="lm-c"><path d="M21 9 L11 9 L11 23 L21 23 M18 13 L14 13 L14 19 L18 19" stroke="#FF2D2D" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"/></g>
-            </svg>
+          <div class="logo-mark" style="width:26px;height:26px;background:transparent;">
+            <img src="logo.png" alt="CARPET" style="width:100%;height:100%;display:block;object-fit:contain;">
           </div>
           CARPET <span class="foot-brand-dim">TERMINAL</span>
         </div>
