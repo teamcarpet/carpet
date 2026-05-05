@@ -30,6 +30,9 @@ pub static TOKEN_2022_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
     131, 185, 13, 39, 254, 189, 249, 40, 216, 161, 139, 252,
 ]);
 
+pub const TOKEN_VAULT_SEED: &[u8] = b"token_vault";
+pub const EVENT_AUTHORITY_SEED: &[u8] = b"__event_authority";
+
 /// Anchor instruction discriminator for `initialize_pool`
 const INITIALIZE_POOL_DISC: [u8; 8] = [95, 180, 10, 172, 84, 174, 232, 40];
 
@@ -85,6 +88,10 @@ pub struct InitializePoolAccounts<'info> {
     pub event_authority: AccountInfo<'info>,
     /// Meteora DAMM v2 program
     pub meteora_program: AccountInfo<'info>,
+    /// Token badge PDA for token A mint
+    pub token_a_badge: AccountInfo<'info>,
+    /// Token badge PDA for token B mint
+    pub token_b_badge: AccountInfo<'info>,
 }
 
 /// Parameters for pool initialization.
@@ -142,6 +149,8 @@ pub fn cpi_initialize_pool<'info>(
         AccountMeta::new_readonly(accounts.system_program.key(), false),
         AccountMeta::new_readonly(accounts.event_authority.key(), false),
         AccountMeta::new_readonly(accounts.meteora_program.key(), false),
+        AccountMeta::new_readonly(accounts.token_a_badge.key(), false),
+        AccountMeta::new_readonly(accounts.token_b_badge.key(), false),
     ];
 
     let ix = Instruction {
@@ -171,12 +180,26 @@ pub fn cpi_initialize_pool<'info>(
         accounts.system_program.clone(),
         accounts.event_authority.clone(),
         accounts.meteora_program.clone(),
+        accounts.token_a_badge.clone(),
+        accounts.token_b_badge.clone(),
     ];
 
     invoke_signed(&ix, account_infos, signer_seeds)
         .map_err(|_| error!(LaunchpadError::InvalidPoolParams))?;
 
     Ok(())
+}
+
+pub fn derive_token_vault_address(token_mint: &Pubkey, pool: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[TOKEN_VAULT_SEED, token_mint.as_ref(), pool.as_ref()],
+        &METEORA_PROGRAM_ID,
+    )
+    .0
+}
+
+pub fn derive_event_authority() -> Pubkey {
+    Pubkey::find_program_address(&[EVENT_AUTHORITY_SEED], &METEORA_PROGRAM_ID).0
 }
 
 // ── Swap CPI ────────────────────────────────────────────────────────────
@@ -393,17 +416,13 @@ pub fn calculate_initial_liquidity(
     require!(token_amount > 0, LaunchpadError::ZeroAmount);
     require!(sqrt_price > 0, LaunchpadError::ZeroAmount);
 
-    let q64 = 1u128 << 64;
-    let liquidity_from_a = (sol_amount as u128)
+    // Our migration flow derives `sqrt_price` from the actual deposit amounts,
+    // so the token-A side yields the correct compounding-pool liquidity delta
+    // without requiring a 256-bit `amount_b << 128` intermediate.
+    let liquidity = (sol_amount as u128)
         .checked_mul(sqrt_price)
         .ok_or(LaunchpadError::MathOverflow)?;
-    let liquidity_from_b = (token_amount as u128)
-        .checked_mul(q64)
-        .ok_or(LaunchpadError::MathOverflow)?
-        .checked_div(sqrt_price)
-        .ok_or(LaunchpadError::DivisionByZero)?;
 
-    let liquidity = liquidity_from_a.min(liquidity_from_b);
     require!(liquidity > 0, LaunchpadError::ZeroAmount);
     Ok(liquidity)
 }
@@ -466,5 +485,16 @@ mod tests {
         let liquidity =
             calculate_initial_liquidity(4_000_000_000, 800_000_000_000_000, sqrt_price).unwrap();
         assert!(liquidity > 0);
+    }
+
+    #[test]
+    fn initial_liquidity_recreates_launch_amounts() {
+        let sol_amount = 4_118_400_000u64;
+        let token_amount = 829_293_274_155_000u64;
+        let sqrt_price = calculate_init_sqrt_price(sol_amount, token_amount).unwrap();
+        let liquidity = calculate_initial_liquidity(sol_amount, token_amount, sqrt_price).unwrap();
+
+        assert!(liquidity > (sol_amount as u128));
+        assert!(liquidity > sqrt_price);
     }
 }

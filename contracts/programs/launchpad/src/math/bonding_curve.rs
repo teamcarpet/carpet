@@ -7,7 +7,6 @@ use anchor_lang::prelude::*;
 ///
 /// All intermediate calculations use u128 to prevent overflow.
 /// Final results are bounds-checked before casting to u64.
-
 /// Calculate tokens received for a given SOL input.
 ///
 /// Formula: tokens_out = virtual_token_reserves - (k / (virtual_sol_reserves + sol_in))

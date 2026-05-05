@@ -4,7 +4,7 @@ use anchor_lang::system_program;
 use crate::errors::LaunchpadError;
 use crate::events::PresaleContribution;
 use crate::math::fees;
-use crate::state::{GlobalConfig, PresalePool, UserPosition};
+use crate::state::{require_presale_pool_active, GlobalConfig, PresalePool, UserPosition};
 
 #[derive(Accounts)]
 pub struct ContributePresale<'info> {
@@ -23,6 +23,7 @@ pub struct ContributePresale<'info> {
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = !pool.is_migrated @ LaunchpadError::AlreadyMigrated,
+        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Account<'info, PresalePool>,
 
@@ -60,6 +61,8 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
 
     let pool = &ctx.accounts.pool;
 
+    require_presale_pool_active(pool.is_paused)?;
+
     // ── CHECKS ──────────────────────────────────────────────────────
 
     // Check presale hasn't ended
@@ -69,6 +72,8 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
     // Calculate presale fee (1% platform)
     let (platform_fee, net_amount) =
         fees::calculate_presale_fee(sol_amount, ctx.accounts.config.presale_platform_fee_bps)?;
+
+    validate_presale_target_capacity(pool.current_raised, pool.migration_target, net_amount)?;
 
     // Check max contribution (1% of migration target)
     let max_contribution: u128 = (pool.migration_target as u128)
@@ -83,7 +88,7 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
     let new_total = ctx
         .accounts
         .user_position
-        .sol_contributed
+        .amount
         .checked_add(net_amount)
         .ok_or(LaunchpadError::MathOverflow)?;
 
@@ -95,7 +100,7 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
     // ── PRE-CAPTURE ───────────────────────────────────────────────
     let pool_key = ctx.accounts.pool.key();
     let contributor_key = ctx.accounts.contributor.key();
-    let is_new = ctx.accounts.user_position.sol_contributed == 0;
+    let is_new = ctx.accounts.user_position.amount == 0;
 
     // ── EFFECTS ─────────────────────────────────────────────────────
 
@@ -107,7 +112,7 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
         ctx.accounts.user_position.refund_claimed = false;
         ctx.accounts.user_position.bump = ctx.bumps.user_position;
     }
-    ctx.accounts.user_position.sol_contributed = new_total;
+    ctx.accounts.user_position.amount = new_total;
 
     // Update pool
     ctx.accounts.pool.current_raised = ctx
@@ -167,4 +172,49 @@ pub fn handle_contribute_presale(ctx: Context<ContributePresale>, sol_amount: u6
     });
 
     Ok(())
+}
+
+fn validate_presale_target_capacity(
+    current_raised: u64,
+    migration_target: u64,
+    net_amount: u64,
+) -> Result<()> {
+    require!(
+        current_raised < migration_target,
+        LaunchpadError::TargetReached
+    );
+
+    let remaining = migration_target
+        .checked_sub(current_raised)
+        .ok_or(LaunchpadError::MathUnderflow)?;
+
+    require!(
+        net_amount <= remaining,
+        LaunchpadError::ContributionExceedsTarget
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exact_target_contribution_is_allowed() {
+        let result = validate_presale_target_capacity(99, 100, 1);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn over_target_contribution_is_rejected() {
+        let result = validate_presale_target_capacity(99, 100, 2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn contributions_stop_after_target_is_reached() {
+        let result = validate_presale_target_capacity(100, 100, 1);
+        assert!(result.is_err());
+    }
 }

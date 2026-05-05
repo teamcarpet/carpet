@@ -1,3 +1,6 @@
+#![allow(unexpected_cfgs)]
+#![allow(deprecated)]
+
 use anchor_lang::prelude::*;
 
 pub mod cpi_meteora;
@@ -44,6 +47,22 @@ pub mod launchpad {
 
     pub fn unpause(ctx: Context<Unpause>) -> Result<()> {
         instructions::handle_unpause(ctx)
+    }
+
+    pub fn pause_bonding_pool(ctx: Context<PauseBondingPool>) -> Result<()> {
+        instructions::handle_pause_bonding_pool(ctx)
+    }
+
+    pub fn unpause_bonding_pool(ctx: Context<UnpauseBondingPool>) -> Result<()> {
+        instructions::handle_unpause_bonding_pool(ctx)
+    }
+
+    pub fn pause_presale_pool(ctx: Context<PausePresalePool>) -> Result<()> {
+        instructions::handle_pause_presale_pool(ctx)
+    }
+
+    pub fn unpause_presale_pool(ctx: Context<UnpausePresalePool>) -> Result<()> {
+        instructions::handle_unpause_presale_pool(ctx)
     }
 
     // ── Bonding Curve ───────────────────────────────────────────────────

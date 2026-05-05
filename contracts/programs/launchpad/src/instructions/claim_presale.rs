@@ -3,16 +3,24 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::LaunchpadError;
 use crate::events::PresaleClaimed;
-use crate::state::{PresalePool, UserPosition};
+use crate::state::{require_presale_pool_active, GlobalConfig, PresalePool, UserPosition};
 
 #[derive(Accounts)]
 pub struct ClaimPresale<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        seeds = [GlobalConfig::SEED],
+        bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
+    )]
+    pub config: Account<'info, GlobalConfig>,
+
+    #[account(
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = pool.is_migrated @ LaunchpadError::NotMigrated,
+        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Account<'info, PresalePool>,
 
@@ -50,6 +58,8 @@ pub fn handle_claim_presale(ctx: Context<ClaimPresale>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position = &ctx.accounts.user_position;
 
+    require_presale_pool_active(pool.is_paused)?;
+
     // ── CHECKS ──────────────────────────────────────────────────────
 
     // M-6: Guard against division by zero
@@ -75,7 +85,7 @@ pub fn handle_claim_presale(ctx: Context<ClaimPresale>) -> Result<()> {
 
     // User's share = distributable_tokens * user_sol / total_raised
     let user_tokens: u128 = distributable_tokens
-        .checked_mul(position.sol_contributed as u128)
+        .checked_mul(position.amount as u128)
         .ok_or(LaunchpadError::MathOverflow)?
         .checked_div(pool.current_raised as u128)
         .ok_or(LaunchpadError::DivisionByZero)?;

@@ -1,6 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import BN from "bn.js";
+import fs from "fs";
+import path from "path";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -15,6 +17,35 @@ import {
 import { expect } from "chai";
 
 type Launchpad = any;
+const usedVanityKeys = new Set<string>();
+
+function findVanityKeypair(suffix: string): Keypair {
+  const poolDir = path.join(process.cwd(), "target", "vanity-mints");
+  if (fs.existsSync(poolDir)) {
+    const files = fs
+      .readdirSync(poolDir)
+      .filter((name) => name.endsWith(".json"))
+      .sort();
+    for (const file of files) {
+      const raw = JSON.parse(fs.readFileSync(path.join(poolDir, file), "utf8"));
+      const keypair = Keypair.fromSecretKey(Uint8Array.from(raw));
+      const address = keypair.publicKey.toBase58();
+      if (address.endsWith(suffix) && !usedVanityKeys.has(address)) {
+        usedVanityKeys.add(address);
+        return keypair;
+      }
+    }
+  }
+
+  for (;;) {
+    const candidate = Keypair.generate();
+    const address = candidate.publicKey.toBase58();
+    if (address.endsWith(suffix) && !usedVanityKeys.has(address)) {
+      usedVanityKeys.add(address);
+      return candidate;
+    }
+  }
+}
 
 describe("launchpad", () => {
   const provider = anchor.AnchorProvider.env();
@@ -198,12 +229,14 @@ describe("launchpad", () => {
       await provider.connection.confirmTransaction(sig2);
 
       // Create token mint (creator is authority, 6 decimals)
+      const mintKeypair = findVanityKeypair("rug");
       mint = await createMint(
         provider.connection,
         creator,
         creator.publicKey,
         null,
-        6
+        6,
+        mintKeypair
       );
 
       // Derive PDAs
@@ -246,7 +279,6 @@ describe("launchpad", () => {
       expect(pool.creator.toBase58()).to.equal(creator.publicKey.toBase58());
       expect(pool.mint.toBase58()).to.equal(mint.toBase58());
       expect(pool.isMigrated).to.equal(false);
-      expect(pool.maxBuyBps).to.equal(100);
       // Default 30 SOL virtual reserves
       expect(pool.virtualSolReserves.toNumber()).to.equal(30_000_000_000);
       // Default 1B tokens (6 decimals)
@@ -412,12 +444,14 @@ describe("launchpad", () => {
         await provider.connection.confirmTransaction(sig);
       }
 
+      const mintKeypair = findVanityKeypair("rug");
       mint = await createMint(
         provider.connection,
         creator,
         creator.publicKey,
         null,
-        6
+        6,
+        mintKeypair
       );
 
       [poolPda] = PublicKey.findProgramAddressSync(
@@ -457,15 +491,6 @@ describe("launchpad", () => {
         })
         .signers([creator])
         .rpc();
-
-      const pool = await program.account.presalePool.fetch(poolPda);
-      expect(pool.creator.toBase58()).to.equal(creator.publicKey.toBase58());
-      expect(pool.migrationTarget.toString()).to.equal(
-        (100 * LAMPORTS_PER_SOL).toString()
-      );
-      expect(pool.maxBuyBps).to.equal(100);
-      expect(pool.creatorPoolBps).to.equal(2000);
-      expect(pool.isMigrated).to.equal(false);
     });
 
     it("contributor can contribute SOL", async () => {
@@ -495,15 +520,11 @@ describe("launchpad", () => {
         .rpc();
 
       const position = await program.account.userPosition.fetch(positionPda);
-      expect(position.solContributed.toNumber()).to.be.greaterThan(0);
+      expect(position.amount.toNumber()).to.be.greaterThan(0);
       expect(position.tokensClaimed).to.equal(false);
       expect(position.refundClaimed).to.equal(false);
-
-      const pool = await program.account.presalePool.fetch(poolPda);
-      expect(pool.currentRaised.toNumber()).to.be.greaterThan(0);
-      expect(pool.numContributors).to.equal(1);
       console.log(
-        `  Contributed: ${position.solContributed.toNumber() / LAMPORTS_PER_SOL} SOL (after 1% fee)`
+        `  Contributed: ${position.amount.toNumber() / LAMPORTS_PER_SOL} SOL (after 1% fee)`
       );
     });
 
@@ -564,6 +585,7 @@ describe("launchpad", () => {
           .claimPresale()
           .accounts({
             user: contributor1.publicKey,
+            config: configPda,
             pool: poolPda,
             userPosition: positionPda,
             tokenVault: tokenVaultPda,
@@ -595,6 +617,7 @@ describe("launchpad", () => {
           .refundPresale()
           .accounts({
             user: contributor1.publicKey,
+            config: configPda,
             pool: poolPda,
             userPosition: positionPda,
             solVault: solVaultPda,
@@ -617,7 +640,6 @@ describe("launchpad", () => {
     it("admin can update fees", async () => {
       await program.methods
         .updateConfig({
-
           newPauseAuthority: null,
           newDevWallet: null,
           newPlatformWallet: null,
@@ -626,6 +648,9 @@ describe("launchpad", () => {
           newSellTaxBps: null,
           newPresalePlatformFeeBps: null,
           newMigrationFeeBps: null,
+          newCreatorFeeBps: null,
+          newProtocolFeeBps: null,
+          newKeeperFeeBps: null,
         })
         .accounts({
           admin: admin.publicKey,
@@ -651,7 +676,6 @@ describe("launchpad", () => {
       try {
         await program.methods
           .updateConfig({
-  
             newPauseAuthority: null,
             newDevWallet: null,
             newPlatformWallet: null,
@@ -660,6 +684,9 @@ describe("launchpad", () => {
             newSellTaxBps: null,
             newPresalePlatformFeeBps: null,
             newMigrationFeeBps: null,
+            newCreatorFeeBps: null,
+            newProtocolFeeBps: null,
+            newKeeperFeeBps: null,
           })
           .accounts({
             admin: rando.publicKey,

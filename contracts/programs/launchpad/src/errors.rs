@@ -25,6 +25,9 @@ pub enum LaunchpadError {
     #[msg("Unauthorized: not pool creator")]
     UnauthorizedCreator,
 
+    #[msg("Unauthorized: not keeper wallet")]
+    UnauthorizedKeeper,
+
     // ── Pool state ──────────────────────────────────────────────────
     #[msg("Platform is paused")]
     PlatformPaused,
@@ -40,6 +43,12 @@ pub enum LaunchpadError {
 
     #[msg("Migration target not reached")]
     MigrationTargetNotReached,
+
+    #[msg("Migration target already reached")]
+    MigrationTargetReached,
+
+    #[msg("Bonding sells are locked once migration target is reached")]
+    SellsLockedAtTarget,
 
     #[msg("Pool is not active")]
     PoolNotActive,
@@ -57,6 +66,9 @@ pub enum LaunchpadError {
     #[msg("Slippage tolerance exceeded")]
     SlippageExceeded,
 
+    #[msg("Minimum output must be greater than zero")]
+    InvalidMinTokensOut,
+
     #[msg("Amount must be greater than zero")]
     ZeroAmount,
 
@@ -69,6 +81,9 @@ pub enum LaunchpadError {
 
     #[msg("Contribution exceeds max 1% per wallet")]
     ExceedsMaxContribution,
+
+    #[msg("Contribution exceeds remaining presale target")]
+    ContributionExceedsTarget,
 
     #[msg("Tokens already claimed")]
     AlreadyClaimed,
@@ -122,6 +137,9 @@ pub enum LaunchpadError {
 
     #[msg("LP position cannot be custodied by admin")]
     AdminLpCustody,
+
+    #[msg("LP position NFT custody is invalid")]
+    InvalidLpPositionCustody,
 
     #[msg("Creator token allocation already fully claimed")]
     NothingToClaim,

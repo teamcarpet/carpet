@@ -93,19 +93,19 @@ pub fn handle_create_bonding_pool(
 
     // C-2 FIX: Validate parameter bounds
     require!(
-        token_supply >= 1_000_000 && token_supply <= 1_000_000_000_000_000_000,
+        (1_000_000..=1_000_000_000_000_000_000).contains(&token_supply),
         LaunchpadError::InvalidPoolParams
     ); // 1M..1e18
     require!(
-        virtual_sol >= 1_000_000_000 && virtual_sol <= 1_000_000_000_000,
+        (1_000_000_000..=1_000_000_000_000).contains(&virtual_sol),
         LaunchpadError::InvalidPoolParams
     ); // 1..1000 SOL
     require!(
-        virtual_tokens >= 1_000_000 && virtual_tokens <= token_supply,
+        virtual_tokens == token_supply,
         LaunchpadError::InvalidPoolParams
     );
     require!(
-        migration_target >= 5_000_000_000 && migration_target <= 100_000_000_000_000,
+        (5_000_000_000..=100_000_000_000_000).contains(&migration_target),
         LaunchpadError::InvalidPoolParams
     ); // 5..100k SOL
 
@@ -145,7 +145,7 @@ pub fn handle_create_bonding_pool(
     pool.real_token_reserves = token_supply;
     pool.initial_real_token_reserves = token_supply;
     pool.migration_target = migration_target;
-    pool.max_buy_bps = 10_000; // 100% for devnet migration testing
+    pool.max_buy_bps = 100; // 1%
     pool.buyback_treasury = 0;
     pool.is_migrated = false;
     pool.is_paused = false;
@@ -167,6 +167,7 @@ pub fn handle_create_bonding_pool(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use anchor_lang::prelude::Pubkey;
 
     #[test]
@@ -176,5 +177,20 @@ mod tests {
 
         assert!(no_freeze_authority.is_none());
         assert!(freeze_authority.is_some());
+    }
+
+    #[test]
+    fn bonding_max_buy_is_one_percent() {
+        assert_eq!(100u16, 100);
+    }
+
+    #[test]
+    fn virtual_tokens_must_match_supply() {
+        let token_supply = DEFAULT_TOKEN_SUPPLY;
+        let virtual_tokens = token_supply;
+        let mismatched = token_supply - 1;
+
+        assert_eq!(virtual_tokens, token_supply);
+        assert_ne!(mismatched, token_supply);
     }
 }

@@ -1,3 +1,4 @@
+use crate::errors::LaunchpadError;
 use anchor_lang::prelude::*;
 
 /// Presale round schedule mode
@@ -68,6 +69,8 @@ pub struct PresalePool {
 
     /// Pool has been migrated to Meteora
     pub is_migrated: bool,
+    /// Pool-level pause
+    pub is_paused: bool,
 
     /// PDA bump
     pub bump: u8,
@@ -78,6 +81,7 @@ pub struct PresalePool {
 }
 
 impl PresalePool {
+    pub const SPACE: usize = 110;
     pub const SEED: &'static [u8] = b"presale_pool";
     pub const SOL_VAULT_SEED: &'static [u8] = b"presale_sol_vault";
     pub const TOKEN_VAULT_SEED: &'static [u8] = b"presale_token_vault";
@@ -86,4 +90,20 @@ impl PresalePool {
     pub const MIN_MIGRATION_TARGET: u64 = 100_000_000_000; // 100 SOL in lamports
     /// Maximum migration target: 10,000 SOL
     pub const MAX_MIGRATION_TARGET: u64 = 10_000_000_000_000; // 10,000 SOL in lamports
+}
+
+pub fn require_presale_pool_active(is_paused: bool) -> Result<()> {
+    require!(!is_paused, LaunchpadError::PoolPaused);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paused_presale_pool_rejects_actions() {
+        assert!(require_presale_pool_active(true).is_err());
+        assert!(require_presale_pool_active(false).is_ok());
+    }
 }

@@ -84,6 +84,11 @@ pub fn handle_sell_bonding(
 
     // ── CHECKS ──────────────────────────────────────────────────────
 
+    require!(
+        bonding_sells_open(pool.real_sol_reserves, pool.migration_target),
+        LaunchpadError::SellsLockedAtTarget
+    );
+
     // Calculate gross SOL out from bonding curve
     let gross_sol_out = bonding_curve::calculate_sell_amount(
         pool.virtual_sol_reserves,
@@ -123,7 +128,7 @@ pub fn handle_sell_bonding(
     let vault_lamports = ctx.accounts.sol_vault.to_account_info().lamports();
     let rent_exempt_min = Rent::get()?.minimum_balance(0);
     require!(
-        vault_lamports.checked_sub(total_out).unwrap_or(0) >= rent_exempt_min,
+        vault_lamports.saturating_sub(total_out) >= rent_exempt_min,
         LaunchpadError::InsufficientSolReserves
     );
 
@@ -141,9 +146,13 @@ pub fn handle_sell_bonding(
         .checked_add(token_amount)
         .ok_or(LaunchpadError::MathOverflow)?;
 
+    let reserve_decrease = gross_sol_out
+        .checked_sub(sell_fees.sell_tax)
+        .ok_or(LaunchpadError::MathUnderflow)?;
+
     pool.real_sol_reserves = pool
         .real_sol_reserves
-        .checked_sub(gross_sol_out)
+        .checked_sub(reserve_decrease)
         .ok_or(LaunchpadError::MathUnderflow)?;
 
     pool.real_token_reserves = pool
@@ -246,4 +255,29 @@ pub fn handle_sell_bonding(
     });
 
     Ok(())
+}
+
+fn bonding_sells_open(real_sol_reserves: u64, migration_target: u64) -> bool {
+    real_sol_reserves < migration_target
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cannot_sell_after_migration_target() {
+        assert!(bonding_sells_open(99, 100));
+        assert!(!bonding_sells_open(100, 100));
+        assert!(!bonding_sells_open(101, 100));
+    }
+
+    #[test]
+    fn reserve_decrease_keeps_sell_tax_in_pool() {
+        let gross_sol_out = 100u64;
+        let sell_tax = 24u64;
+        let reserve_decrease = gross_sol_out - sell_tax;
+
+        assert_eq!(reserve_decrease, 76);
+    }
 }

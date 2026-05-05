@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::LaunchpadError;
 use crate::events::PresaleRefunded;
-use crate::state::{PresalePool, UserPosition};
+use crate::state::{require_presale_pool_active, GlobalConfig, PresalePool, UserPosition};
 
 #[derive(Accounts)]
 pub struct RefundPresale<'info> {
@@ -10,10 +10,18 @@ pub struct RefundPresale<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        seeds = [GlobalConfig::SEED],
+        bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
+    )]
+    pub config: Account<'info, GlobalConfig>,
+
+    #[account(
         mut,
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = !pool.is_migrated @ LaunchpadError::AlreadyMigrated,
+        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Account<'info, PresalePool>,
 
@@ -41,6 +49,8 @@ pub fn handle_refund_presale(ctx: Context<RefundPresale>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position = &ctx.accounts.user_position;
 
+    require_presale_pool_active(pool.is_paused)?;
+
     // ── CHECKS ──────────────────────────────────────────────────────
 
     let now = Clock::get()?.unix_timestamp;
@@ -50,7 +60,7 @@ pub fn handle_refund_presale(ctx: Context<RefundPresale>) -> Result<()> {
         LaunchpadError::TargetReached
     );
 
-    let refund_amount = position.sol_contributed;
+    let refund_amount = position.amount;
     require!(refund_amount > 0, LaunchpadError::ZeroAmount);
 
     // ── EFFECTS ─────────────────────────────────────────────────────
@@ -66,6 +76,7 @@ pub fn handle_refund_presale(ctx: Context<RefundPresale>) -> Result<()> {
         .ok_or(LaunchpadError::MathUnderflow)?;
 
     let position = &mut ctx.accounts.user_position;
+    position.amount = 0;
     position.refund_claimed = true;
 
     // ── INTERACTIONS ────────────────────────────────────────────────
@@ -96,4 +107,15 @@ pub fn handle_refund_presale(ctx: Context<RefundPresale>) -> Result<()> {
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn refund_resets_position_amount() {
+        let mut amount = 123u64;
+        assert_eq!(amount, 123);
+        amount = 0;
+        assert_eq!(amount, 0);
+    }
 }

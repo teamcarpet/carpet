@@ -14,14 +14,15 @@ const {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } = require("@solana/web3.js");
-const {
-  CP_AMM_PROGRAM_ID,
-  derivePoolAddress,
-  derivePoolAuthority,
-  derivePositionAddress,
-  derivePositionNftAccount,
-  deriveTokenVaultAddress,
-} = require("@meteora-ag/cp-amm-sdk");
+  const {
+    CP_AMM_PROGRAM_ID,
+    derivePoolAddress,
+    derivePoolAuthority,
+    derivePositionAddress,
+    derivePositionNftAccount,
+    deriveTokenBadgeAddress,
+    deriveTokenVaultAddress,
+  } = require("@meteora-ag/cp-amm-sdk");
 const fs = require("fs");
 const path = require("path");
 
@@ -96,18 +97,11 @@ async function main() {
   const positionNftMint = Keypair.generate();
   const positionNftAccount = derivePositionNftAccount(positionNftMint.publicKey);
   const positionAccount = derivePositionAddress(positionNftMint.publicKey);
-  const positionNftMetadata = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("metadata"),
-      METADATA_PROGRAM_ID.toBuffer(),
-      positionNftMint.publicKey.toBuffer(),
-    ],
-    METADATA_PROGRAM_ID
-  )[0];
-
   const meteoraPool = derivePoolAddress(METEORA_POOL_CONFIG, NATIVE_MINT, MINT);
   const meteoraVaultA = deriveTokenVaultAddress(NATIVE_MINT, meteoraPool);
   const meteoraVaultB = deriveTokenVaultAddress(MINT, meteoraPool);
+  const meteoraTokenABadge = deriveTokenBadgeAddress(NATIVE_MINT);
+  const meteoraTokenBBadge = deriveTokenBadgeAddress(MINT);
   const meteoraPoolAuthority = derivePoolAuthority();
 
   const payerWsolAccount = await getOrCreateAssociatedTokenAccount(
@@ -162,9 +156,10 @@ async function main() {
       positionNftMint: positionNftMint.publicKey,
       positionNftAccount,
       positionAccount,
-      positionNftMetadata,
       meteoraVaultA,
       meteoraVaultB,
+      meteoraTokenABadge,
+      meteoraTokenBBadge,
       wsolMint: NATIVE_MINT,
       tokenMint: MINT,
       payerWsolAccount: payerWsolAccount.address,

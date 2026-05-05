@@ -94,6 +94,11 @@ pub fn handle_buy_bonding(
 
     // ── CHECKS ──────────────────────────────────────────────────────
 
+    require!(
+        bonding_trading_open(pool.real_sol_reserves, pool.migration_target),
+        LaunchpadError::MigrationTargetReached
+    );
+
     let buy_fees =
         fees::calculate_buy_fees(sol_amount, config.dev_fee_bps, config.platform_fee_bps)?;
 
@@ -122,7 +127,7 @@ pub fn handle_buy_bonding(
     let cumulative = ctx
         .accounts
         .buyer_position
-        .sol_contributed
+        .amount
         .checked_add(tokens_out)
         .ok_or(LaunchpadError::MathOverflow)?;
     require!(cumulative <= max_tokens, LaunchpadError::ExceedsMaxBuy);
@@ -140,12 +145,12 @@ pub fn handle_buy_bonding(
     // ── EFFECTS ─────────────────────────────────────────────────────
 
     // Update buyer position (tracking cumulative tokens bought)
-    if ctx.accounts.buyer_position.sol_contributed == 0 {
+    if ctx.accounts.buyer_position.amount == 0 {
         ctx.accounts.buyer_position.user = ctx.accounts.buyer.key();
         ctx.accounts.buyer_position.pool = pool_key;
         ctx.accounts.buyer_position.bump = ctx.bumps.buyer_position;
     }
-    ctx.accounts.buyer_position.sol_contributed = cumulative;
+    ctx.accounts.buyer_position.amount = cumulative;
 
     let pool = &mut ctx.accounts.pool;
 
@@ -254,4 +259,20 @@ pub fn handle_buy_bonding(
     }
 
     Ok(())
+}
+
+fn bonding_trading_open(real_sol_reserves: u64, migration_target: u64) -> bool {
+    real_sol_reserves < migration_target
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cannot_buy_after_migration_target() {
+        assert!(bonding_trading_open(99, 100));
+        assert!(!bonding_trading_open(100, 100));
+        assert!(!bonding_trading_open(101, 100));
+    }
 }

@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
 pub const KEEPER_WALLET: Pubkey = pubkey!("3C6H3pudeYKfMqqc68j9Gk1xXnRAvgwsJGqWH9aBF61n");
+pub const ALLOWED_METEORA_POOL_CONFIG: Pubkey =
+    pubkey!("3KLdspUofc75aaEAJdBo1o6D6cyzXJVtGB8PgpWJEiaR");
+pub const ACTIVATION_DELAY_SLOTS: u64 = 150;
 
 #[account]
 #[derive(InitSpace)]

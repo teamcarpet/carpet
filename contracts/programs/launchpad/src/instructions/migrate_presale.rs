@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{self, Mint, SyncNative, Token, TokenAccount};
 
 use crate::cpi_meteora::{
@@ -9,11 +9,14 @@ use crate::cpi_meteora::{
 use crate::errors::LaunchpadError;
 use crate::events::MigrationCompleted;
 use crate::math::fees;
-use crate::state::{BuybackState, GlobalConfig, PresalePool};
+use crate::state::{
+    require_presale_pool_active, BuybackState, GlobalConfig, PresalePool, ACTIVATION_DELAY_SLOTS,
+    ALLOWED_METEORA_POOL_CONFIG,
+};
 
 #[derive(Accounts)]
 pub struct MigratePresale<'info> {
-    /// C-6: Only admin can trigger migration
+    /// Anyone can permissionlessly migrate once the target is reached.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -21,7 +24,6 @@ pub struct MigratePresale<'info> {
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
         constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
-        constraint = config.admin == payer.key() @ LaunchpadError::UnauthorizedAdmin,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -30,6 +32,7 @@ pub struct MigratePresale<'info> {
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = !pool.is_migrated @ LaunchpadError::AlreadyMigrated,
+        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
         constraint = pool.current_raised >= pool.migration_target
             @ LaunchpadError::MigrationTargetNotReached,
     )]
@@ -99,6 +102,10 @@ pub struct MigratePresale<'info> {
     pub meteora_pool: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool config
+    #[account(
+        constraint = meteora_pool_config.key() == ALLOWED_METEORA_POOL_CONFIG
+            @ LaunchpadError::InvalidPoolParams
+    )]
     pub meteora_pool_config: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool authority PDA
@@ -110,6 +117,10 @@ pub struct MigratePresale<'info> {
     pub token_2022_program: UncheckedAccount<'info>,
 
     /// CHECK: Meteora event authority PDA
+    #[account(
+        constraint = meteora_event_authority.key() == cpi_meteora::derive_event_authority()
+            @ LaunchpadError::InvalidPoolParams
+    )]
     pub meteora_event_authority: UncheckedAccount<'info>,
 
     /// CHECK: Program PDA that owns/custodies the LP position.
@@ -124,17 +135,21 @@ pub struct MigratePresale<'info> {
     #[account(mut)]
     pub position_nft_mint: Signer<'info>,
 
-    /// CHECK: Position NFT token account
-    #[account(mut)]
-    pub position_nft_account: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        constraint = position_nft_account.key()
+            == get_associated_token_address(&lp_custody.key(), &position_nft_mint.key())
+            @ LaunchpadError::InvalidLpPositionCustody,
+        constraint = position_nft_account.owner == lp_custody.key()
+            @ LaunchpadError::InvalidLpPositionCustody,
+        constraint = position_nft_account.mint == position_nft_mint.key()
+            @ LaunchpadError::InvalidLpPositionCustody,
+    )]
+    pub position_nft_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: Position account
     #[account(mut)]
     pub position_account: UncheckedAccount<'info>,
-
-    /// CHECK: Position NFT metadata
-    #[account(mut)]
-    pub position_nft_metadata: UncheckedAccount<'info>,
 
     /// CHECK: Meteora token vault A (SOL/WSOL), initialized by Meteora CPI
     #[account(mut)]
@@ -143,6 +158,12 @@ pub struct MigratePresale<'info> {
     /// CHECK: Meteora token vault B (token), initialized by Meteora CPI
     #[account(mut)]
     pub meteora_vault_b: UncheckedAccount<'info>,
+
+    /// CHECK: Meteora token badge PDA for WSOL mint.
+    pub meteora_token_a_badge: UncheckedAccount<'info>,
+
+    /// CHECK: Meteora token badge PDA for launch token mint.
+    pub meteora_token_b_badge: UncheckedAccount<'info>,
 
     /// C-7: WSOL mint validated
     /// CHECK: Hardcoded address
@@ -185,6 +206,13 @@ pub struct MigratePresale<'info> {
 pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let config = &ctx.accounts.config;
+
+    require_presale_pool_active(pool.is_paused)?;
+
+    require!(
+        presale_can_migrate_permissionlessly(pool.current_raised, pool.migration_target),
+        LaunchpadError::MigrationTargetNotReached
+    );
 
     // ── CALCULATE SPLITS ────────────────────────────────────────────
     let total_sol = pool.current_raised;
@@ -335,6 +363,8 @@ pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
         system_program: ctx.accounts.system_program.to_account_info(),
         event_authority: ctx.accounts.meteora_event_authority.to_account_info(),
         meteora_program: ctx.accounts.meteora_program.to_account_info(),
+        token_a_badge: ctx.accounts.meteora_token_a_badge.to_account_info(),
+        token_b_badge: ctx.accounts.meteora_token_b_badge.to_account_info(),
     };
 
     cpi_meteora::cpi_initialize_pool(
@@ -342,10 +372,20 @@ pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
         &InitializePoolParams {
             liquidity: initial_liquidity,
             sqrt_price,
-            activation_point: None,
+            activation_point: Some(delayed_activation_slot(Clock::get()?.slot)?),
         },
         &[],
     )?;
+
+    ctx.accounts.position_nft_account.reload()?;
+    require!(
+        ctx.accounts.position_nft_account.owner == ctx.accounts.lp_custody.key(),
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    require!(
+        ctx.accounts.position_nft_account.amount == 1,
+        LaunchpadError::InvalidLpPositionCustody
+    );
 
     // ── EVENTS ──────────────────────────────────────────────────────
 
@@ -381,6 +421,16 @@ fn calculate_presale_sol_split(
     Ok((migration_fee, liquidity_sol, creator_sol, buyback_sol))
 }
 
+fn presale_can_migrate_permissionlessly(current_raised: u64, migration_target: u64) -> bool {
+    current_raised >= migration_target
+}
+
+fn delayed_activation_slot(current_slot: u64) -> Result<u64> {
+    current_slot
+        .checked_add(ACTIVATION_DELAY_SLOTS)
+        .ok_or(LaunchpadError::MathOverflow.into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -396,5 +446,17 @@ mod tests {
         assert_eq!(creator, 20_000_000_000);
         assert_eq!(buyback, 59_000_000_000);
         assert_eq!(fee + liquidity + creator + buyback, total_sol);
+    }
+
+    #[test]
+    fn presale_migration_becomes_permissionless_once_target_is_reached() {
+        assert!(!presale_can_migrate_permissionlessly(99, 100));
+        assert!(presale_can_migrate_permissionlessly(100, 100));
+        assert!(presale_can_migrate_permissionlessly(101, 100));
+    }
+
+    #[test]
+    fn presale_migration_uses_activation_delay() {
+        assert_eq!(delayed_activation_slot(10).unwrap(), 160);
     }
 }

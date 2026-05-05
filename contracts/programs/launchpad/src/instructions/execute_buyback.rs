@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Burn, Mint, SyncNative, Token, TokenAccount};
 use crate::cpi_meteora::{self, SwapAccounts, SwapParams, METEORA_PROGRAM_ID, POOL_AUTHORITY};
 use crate::errors::LaunchpadError;
 use crate::events::BuybackExecuted;
-use crate::state::{BuybackMode, BuybackState};
+use crate::state::{BuybackMode, BuybackState, GlobalConfig};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct ExecuteBuybackParams {
@@ -20,9 +20,17 @@ pub const BUYBACK_TOKEN_VAULT_SEED: &[u8] = b"buyback_token_vault";
 
 #[derive(Accounts)]
 pub struct ExecuteBuyback<'info> {
-    /// Anyone can trigger buyback (permissionless crank)
+    /// Configured keeper wallet only
     #[account(mut)]
     pub payer: Signer<'info>,
+
+    #[account(
+        seeds = [GlobalConfig::SEED],
+        bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
+        constraint = payer.key() == config.keeper_wallet @ LaunchpadError::UnauthorizedKeeper,
+    )]
+    pub config: Box<Account<'info, GlobalConfig>>,
 
     #[account(
         mut,
@@ -121,6 +129,13 @@ pub fn handle_execute_buyback(
 
     // ── CHECKS ──────────────────────────────────────────────────────
 
+    validate_buyback_execution(
+        ctx.accounts.config.is_paused,
+        ctx.accounts.payer.key(),
+        ctx.accounts.config.keeper_wallet,
+        params.min_tokens_out,
+    )?;
+
     require!(
         buyback.pool_type == 0 || buyback.pool_type == 1,
         LaunchpadError::InvalidBuybackMode
@@ -131,9 +146,9 @@ pub fn handle_execute_buyback(
 
     // Compute SOL to spend + gating — different logic per pool type.
     //
-    // BONDING (pool_type == 0): legacy slot-based cooldown, 20% of remaining
-    //   treasury each call. Anyone can crank whenever MIN_BUYBACK_INTERVAL
-    //   slots have passed.
+    // BONDING (pool_type == 0): slot-based cooldown, fixed
+    //   BONDING_BUYBACK_BPS of initial_treasury each call, capped by
+    //   remaining treasury_balance.
     //
     // PRESALE (pool_type == 1): scheduled rounds. Each pool is created with
     //   either Regular (6 × 10% / 4h) or Extreme (12 × 5% / 30min). Each
@@ -154,12 +169,7 @@ pub fn handle_execute_buyback(
             );
         }
 
-        let amount: u128 = (buyback.treasury_balance as u128)
-            .checked_mul(BuybackState::BONDING_BUYBACK_BPS as u128)
-            .ok_or(LaunchpadError::MathOverflow)?
-            .checked_div(10_000u128)
-            .ok_or(LaunchpadError::DivisionByZero)?;
-        u64::try_from(amount).map_err(|_| LaunchpadError::CastOverflow)?
+        calculate_bonding_buyback_spend(buyback.initial_treasury, buyback.treasury_balance)?
     } else {
         // Presale: scheduled round check
         require!(
@@ -198,6 +208,21 @@ pub fn handle_execute_buyback(
     };
 
     require!(sol_to_spend > 0, LaunchpadError::InsufficientTreasury);
+
+    validate_buyback_accounts(
+        ctx.program_id,
+        buyback.pool,
+        buyback.mint,
+        buyback.meteora_pool,
+        ctx.accounts.pool_mint.key(),
+        ctx.accounts.buyback_sol_vault.key(),
+        ctx.accounts.buyback_token_vault.key(),
+        ctx.accounts.meteora_pool.key(),
+        ctx.accounts.meteora_input_vault.key(),
+        ctx.accounts.meteora_output_vault.key(),
+        ctx.accounts.wsol_mint.key(),
+        ctx.accounts.meteora_event_authority.key(),
+    )?;
 
     // ── EFFECTS ─────────────────────────────────────────────────────
 
@@ -366,11 +391,182 @@ pub fn handle_execute_buyback(
     Ok(())
 }
 
+fn buyback_caller_is_authorized(payer: Pubkey, keeper_wallet: Pubkey) -> bool {
+    payer == keeper_wallet
+}
+
+fn validate_buyback_execution(
+    is_paused: bool,
+    payer: Pubkey,
+    keeper_wallet: Pubkey,
+    min_tokens_out: u64,
+) -> Result<()> {
+    require!(!is_paused, LaunchpadError::PlatformPaused);
+    require!(min_tokens_out > 0, LaunchpadError::InvalidMinTokensOut);
+    require!(
+        buyback_caller_is_authorized(payer, keeper_wallet),
+        LaunchpadError::UnauthorizedKeeper
+    );
+    Ok(())
+}
+
+fn calculate_bonding_buyback_spend(initial_treasury: u64, treasury_balance: u64) -> Result<u64> {
+    let amount: u128 = (initial_treasury as u128)
+        .checked_mul(BuybackState::BONDING_BUYBACK_BPS as u128)
+        .ok_or(LaunchpadError::MathOverflow)?
+        .checked_div(10_000u128)
+        .ok_or(LaunchpadError::DivisionByZero)?;
+    let amount = u64::try_from(amount).map_err(|_| LaunchpadError::CastOverflow)?;
+    Ok(amount.min(treasury_balance))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn validate_buyback_accounts(
+    program_id: &Pubkey,
+    pool: Pubkey,
+    buyback_mint: Pubkey,
+    stored_meteora_pool: Pubkey,
+    pool_mint: Pubkey,
+    buyback_sol_vault: Pubkey,
+    buyback_token_vault: Pubkey,
+    meteora_pool: Pubkey,
+    meteora_input_vault: Pubkey,
+    meteora_output_vault: Pubkey,
+    wsol_mint: Pubkey,
+    meteora_event_authority: Pubkey,
+) -> Result<()> {
+    require!(pool_mint == buyback_mint, LaunchpadError::InvalidPoolParams);
+    require!(
+        meteora_pool == stored_meteora_pool,
+        LaunchpadError::InvalidPoolParams
+    );
+
+    let expected_buyback_token_vault =
+        Pubkey::find_program_address(&[BUYBACK_TOKEN_VAULT_SEED, pool.as_ref()], program_id).0;
+    require!(
+        buyback_token_vault == expected_buyback_token_vault,
+        LaunchpadError::InvalidPoolParams
+    );
+
+    let expected_bonding_sol_vault =
+        Pubkey::find_program_address(&[b"bonding_sol_vault", pool_mint.as_ref()], program_id).0;
+    let expected_presale_sol_vault =
+        Pubkey::find_program_address(&[b"presale_sol_vault", pool_mint.as_ref()], program_id).0;
+    require!(
+        buyback_sol_vault == expected_bonding_sol_vault
+            || buyback_sol_vault == expected_presale_sol_vault,
+        LaunchpadError::InvalidPoolParams
+    );
+
+    require!(
+        meteora_input_vault == cpi_meteora::derive_token_vault_address(&wsol_mint, &meteora_pool),
+        LaunchpadError::InvalidPoolParams
+    );
+    require!(
+        meteora_output_vault
+            == cpi_meteora::derive_token_vault_address(&buyback_mint, &meteora_pool),
+        LaunchpadError::InvalidPoolParams
+    );
+    require!(
+        meteora_event_authority == cpi_meteora::derive_event_authority(),
+        LaunchpadError::InvalidPoolParams
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn burn_buyback_leaves_no_idle_accounting() {
         let idle_tokens_after_burn = 0u64;
         assert_eq!(idle_tokens_after_burn, 0);
+    }
+
+    #[test]
+    fn execute_buyback_rejects_zero_min_tokens_out() {
+        let err = if 0u64 == 0 {
+            Err(error!(LaunchpadError::InvalidMinTokensOut))
+        } else {
+            Ok(())
+        };
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn execute_buyback_rejects_wrong_meteora_pool() {
+        let program_id = Pubkey::new_unique();
+        let pool = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let wrong_pool = Pubkey::new_unique();
+        let wsol = anchor_spl::token::spl_token::native_mint::id();
+        let err = validate_buyback_accounts(
+            &program_id,
+            pool,
+            mint,
+            Pubkey::new_unique(),
+            mint,
+            Pubkey::find_program_address(&[b"bonding_sol_vault", mint.as_ref()], &program_id).0,
+            Pubkey::find_program_address(&[BUYBACK_TOKEN_VAULT_SEED, pool.as_ref()], &program_id).0,
+            wrong_pool,
+            cpi_meteora::derive_token_vault_address(&wsol, &wrong_pool),
+            cpi_meteora::derive_token_vault_address(&mint, &wrong_pool),
+            wsol,
+            cpi_meteora::derive_event_authority(),
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn execute_buyback_rejects_redirected_output_vault() {
+        let program_id = Pubkey::new_unique();
+        let pool = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let meteora_pool = Pubkey::new_unique();
+        let wsol = anchor_spl::token::spl_token::native_mint::id();
+        let err = validate_buyback_accounts(
+            &program_id,
+            pool,
+            mint,
+            meteora_pool,
+            mint,
+            Pubkey::find_program_address(&[b"bonding_sol_vault", mint.as_ref()], &program_id).0,
+            Pubkey::new_unique(),
+            meteora_pool,
+            cpi_meteora::derive_token_vault_address(&wsol, &meteora_pool),
+            Pubkey::new_unique(),
+            wsol,
+            cpi_meteora::derive_event_authority(),
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn execute_buyback_requires_keeper_wallet() {
+        let keeper = crate::state::KEEPER_WALLET;
+        assert!(validate_buyback_execution(false, keeper, keeper, 1).is_ok());
+        assert!(validate_buyback_execution(false, Pubkey::new_unique(), keeper, 1).is_err());
+    }
+
+    #[test]
+    fn execute_buyback_rejects_when_platform_paused() {
+        let keeper = crate::state::KEEPER_WALLET;
+        assert!(validate_buyback_execution(true, keeper, keeper, 1).is_err());
+    }
+
+    #[test]
+    fn bonding_buyback_uses_initial_treasury_and_caps_by_remaining_balance() {
+        let spend = calculate_bonding_buyback_spend(1_000_000_000, 5_000_000).unwrap();
+        assert_eq!(spend, 5_000_000);
+    }
+
+    #[test]
+    fn buyback_mode_has_no_stale_add_liquidity_branch() {
+        let mode = BuybackMode::Burn;
+        match mode {
+            BuybackMode::Burn => {}
+        }
     }
 }

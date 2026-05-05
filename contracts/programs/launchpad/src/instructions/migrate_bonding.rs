@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{self, Mint, SyncNative, Token, TokenAccount};
 
 use crate::cpi_meteora::{
@@ -9,7 +9,10 @@ use crate::cpi_meteora::{
 use crate::errors::LaunchpadError;
 use crate::events::MigrationCompleted;
 use crate::math::fees;
-use crate::state::{BondingCurvePool, BuybackState, GlobalConfig};
+use crate::state::{
+    BondingCurvePool, BuybackState, GlobalConfig, ACTIVATION_DELAY_SLOTS,
+    ALLOWED_METEORA_POOL_CONFIG,
+};
 
 #[derive(Accounts)]
 pub struct MigrateBonding<'info> {
@@ -95,6 +98,10 @@ pub struct MigrateBonding<'info> {
     pub meteora_pool: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool config (fee/scheduler config)
+    #[account(
+        constraint = meteora_pool_config.key() == ALLOWED_METEORA_POOL_CONFIG
+            @ LaunchpadError::InvalidPoolParams
+    )]
     pub meteora_pool_config: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool authority PDA
@@ -106,6 +113,10 @@ pub struct MigrateBonding<'info> {
     pub token_2022_program: UncheckedAccount<'info>,
 
     /// CHECK: Meteora event authority PDA
+    #[account(
+        constraint = meteora_event_authority.key() == cpi_meteora::derive_event_authority()
+            @ LaunchpadError::InvalidPoolParams
+    )]
     pub meteora_event_authority: UncheckedAccount<'info>,
 
     /// CHECK: Program PDA that owns/custodies the LP position.
@@ -120,17 +131,21 @@ pub struct MigrateBonding<'info> {
     #[account(mut)]
     pub position_nft_mint: Signer<'info>,
 
-    /// CHECK: Position NFT token account (ATA of payer for NFT mint)
-    #[account(mut)]
-    pub position_nft_account: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        constraint = position_nft_account.key()
+            == get_associated_token_address(&lp_custody.key(), &position_nft_mint.key())
+            @ LaunchpadError::InvalidLpPositionCustody,
+        constraint = position_nft_account.owner == lp_custody.key()
+            @ LaunchpadError::InvalidLpPositionCustody,
+        constraint = position_nft_account.mint == position_nft_mint.key()
+            @ LaunchpadError::InvalidLpPositionCustody,
+    )]
+    pub position_nft_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: Position state account
     #[account(mut)]
     pub position_account: UncheckedAccount<'info>,
-
-    /// CHECK: Position NFT metadata (Metaplex)
-    #[account(mut)]
-    pub position_nft_metadata: UncheckedAccount<'info>,
 
     /// CHECK: Meteora token vault A (SOL/WSOL side), initialized by Meteora CPI
     #[account(mut)]
@@ -139,6 +154,12 @@ pub struct MigrateBonding<'info> {
     /// CHECK: Meteora token vault B (token side), initialized by Meteora CPI
     #[account(mut)]
     pub meteora_vault_b: UncheckedAccount<'info>,
+
+    /// CHECK: Meteora token badge PDA for WSOL mint.
+    pub meteora_token_a_badge: UncheckedAccount<'info>,
+
+    /// CHECK: Meteora token badge PDA for launch token mint.
+    pub meteora_token_b_badge: UncheckedAccount<'info>,
 
     /// C-7: WSOL mint — validated to be the canonical native mint
     /// CHECK: Hardcoded address validation
@@ -323,16 +344,34 @@ pub fn handle_migrate_bonding(ctx: Context<MigrateBonding>) -> Result<()> {
         system_program: ctx.accounts.system_program.to_account_info(),
         event_authority: ctx.accounts.meteora_event_authority.to_account_info(),
         meteora_program: ctx.accounts.meteora_program.to_account_info(),
+        token_a_badge: ctx.accounts.meteora_token_a_badge.to_account_info(),
+        token_b_badge: ctx.accounts.meteora_token_b_badge.to_account_info(),
     };
 
     let meteora_params = InitializePoolParams {
         liquidity: initial_liquidity,
         sqrt_price,
-        activation_point: None, // activate immediately
+        activation_point: Some(delayed_activation_slot(Clock::get()?.slot)?),
     };
 
     // Payer signs the Meteora CPI (not a PDA, so empty signer seeds)
     cpi_meteora::cpi_initialize_pool(&meteora_accounts, &meteora_params, &[])?;
+
+    ctx.accounts.position_nft_account.reload()?;
+    require!(
+        ctx.accounts.position_nft_account.owner == ctx.accounts.lp_custody.key(),
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    require!(
+        ctx.accounts.position_nft_account.amount == 1,
+        LaunchpadError::InvalidLpPositionCustody
+    );
+
+    ctx.accounts.token_vault.reload()?;
+    require!(
+        ctx.accounts.token_vault.amount == 0,
+        LaunchpadError::InvalidPoolParams
+    );
 
     // ── EVENTS ──────────────────────────────────────────────────────
 
@@ -367,9 +406,15 @@ fn calculate_bonding_migration_split(
         .checked_add(buyback_treasury)
         .ok_or(LaunchpadError::MathOverflow)?;
 
-    let liquidity_tokens = fees::apply_bps(remaining_tokens, 8000)?;
+    let liquidity_tokens = remaining_tokens;
 
     Ok((migration_fee, liquidity_sol, buyback_sol, liquidity_tokens))
+}
+
+fn delayed_activation_slot(current_slot: u64) -> Result<u64> {
+    current_slot
+        .checked_add(ACTIVATION_DELAY_SLOTS)
+        .ok_or(LaunchpadError::MathOverflow.into())
 }
 
 #[cfg(test)]
@@ -387,7 +432,7 @@ mod tests {
         assert_eq!(liquidity, 80_000_000_000);
         assert_eq!(buyback, 21_000_000_000);
         assert_eq!(fee + liquidity + buyback, total_sol + buyback_treasury);
-        assert_eq!(liquidity_tokens, 800_000);
+        assert_eq!(liquidity_tokens, 1_000_000);
     }
 
     #[test]
@@ -396,5 +441,22 @@ mod tests {
         let lp_custody = Pubkey::new_unique();
 
         assert_ne!(lp_custody, admin);
+    }
+
+    #[test]
+    fn lp_position_nft_ata_belongs_to_lp_custody() {
+        let lp_custody = Pubkey::new_unique();
+        let payer = Pubkey::new_unique();
+        let nft_mint = Pubkey::new_unique();
+
+        let custody_ata = get_associated_token_address(&lp_custody, &nft_mint);
+        let payer_ata = get_associated_token_address(&payer, &nft_mint);
+
+        assert_ne!(custody_ata, payer_ata);
+    }
+
+    #[test]
+    fn bonding_migration_uses_activation_delay() {
+        assert_eq!(delayed_activation_slot(10).unwrap(), 160);
     }
 }

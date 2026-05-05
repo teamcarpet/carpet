@@ -8,8 +8,10 @@ pub struct UserPosition {
     /// Pool this position belongs to
     pub pool: Pubkey,
 
-    /// Total SOL contributed (lamports)
-    pub sol_contributed: u64,
+    /// Position amount.
+    /// Bonding pools use this as cumulative tokens bought.
+    /// Presale pools use this as cumulative SOL contributed.
+    pub amount: u64,
 
     /// Whether tokens have been claimed (presale only)
     pub tokens_claimed: bool,

@@ -14,7 +14,7 @@ Anchor/Rust smart contract implementing a token launchpad with two modes — **B
 | Entry Price | Constant product (pump.fun style) | Equal for all |
 | If target not reached | — | Full refund |
 | Migration Liquidity | 80% → Meteora DAMM | 20% → Meteora DAMM |
-| Migration Buyback | 20% from pool every 2 min | 60% from buyback pool (burn / add LP) |
+| Migration Buyback | Fixed burn-only buyback from treasury | 60% scheduled burn-only buyback |
 
 ## Project structure
 
@@ -32,11 +32,14 @@ tests/
 
 ## Security
 
-Audited against checklists from OtterSec, Neodyme, Halborn, Trail of Bits, Sec3. Findings fixed:
+Audited against standard Solana launchpad risk checklists. Current hardening includes:
 
-- **Critical (7 fixed):** two-step admin transfer, bonding pool param bounds, SOL accounting via `system_program::transfer` with PDA signer, buyback vault seed derivation, permissionless migration → admin-only, WSOL mint validation, `sqrt_price` overflow (`checked_shl(128)` bug).
-- **High (7 fixed):** slippage protection (`min_tokens_out` / `min_sol_out`), per-wallet cumulative max buy, actual token mint passed to Meteora CPI, rent-exempt check on sell, `presale_platform_fee_bps` bounds, no reset of claimed flags on re-entry.
-- **Medium/Low (8 fixed):** division by zero guards, `current_raised` decremented on refund, strict `pool_type` validation, fee param validation, pause events.
+- keeper-only buyback execution with global pause support
+- pool-level pause support for both bonding and presale pools
+- 1% anti-whale caps on bonding and presale participation
+- LP position NFT custody locked to program-controlled ATA
+- migration activation delay and Meteora account/config validation
+- creator token claims and LP-fee routing locked to validated destinations
 
 ### Audit-ready patterns
 
@@ -56,7 +59,7 @@ Audited against checklists from OtterSec, Neodyme, Halborn, Trail of Bits, Sec3.
 anchor build
 ```
 
-Requires Anchor 0.31.0+. Program ID: `46yNwftmNt4ggWqYwPEzEdYgXCug4W61AM4DpkWmmsMB`.
+Requires Anchor 0.31.0+. Program ID: `DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV`.
 
 ## Test
 
@@ -64,7 +67,7 @@ Requires Anchor 0.31.0+. Program ID: `46yNwftmNt4ggWqYwPEzEdYgXCug4W61AM4DpkWmms
 anchor test
 ```
 
-All 16 integration tests pass on localnet.
+The local Anchor integration suite passes on localnet.
 
 ## Deployment
 

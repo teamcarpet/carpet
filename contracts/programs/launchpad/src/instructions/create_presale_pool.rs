@@ -46,7 +46,7 @@ pub struct CreatePresalePool<'info> {
     #[account(
         init,
         payer = creator,
-        space = 8 + PresalePool::INIT_SPACE,
+        space = 8 + PresalePool::SPACE,
         seeds = [PresalePool::SEED, mint.key().as_ref()],
         bump,
     )]
@@ -144,6 +144,7 @@ pub fn handle_create_presale_pool(
     pool.num_contributors = 0;
     pool.presale_mode = params.presale_mode;
     pool.is_migrated = false;
+    pool.is_paused = false;
     pool.bump = ctx.bumps.pool;
     pool.sol_vault_bump = ctx.bumps.sol_vault;
     pool.token_vault_bump = ctx.bumps.token_vault;

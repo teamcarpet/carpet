@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::cpi_meteora::{self, ClaimPositionFeeAccounts, METEORA_PROGRAM_ID, POOL_AUTHORITY};
 use crate::errors::LaunchpadError;
-use crate::state::{BuybackState, GlobalConfig};
+use crate::state::{BondingCurvePool, BuybackState, GlobalConfig, PresalePool};
 
 #[derive(Accounts)]
 pub struct ClaimLpFees<'info> {
@@ -14,6 +14,7 @@ pub struct ClaimLpFees<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -65,6 +66,7 @@ pub struct SplitClaimedFees<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -116,6 +118,7 @@ pub struct HarvestAndSplitLpFees<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
+        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -438,6 +441,7 @@ pub fn handle_split_claimed_fees(ctx: Context<SplitClaimedFees>) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn split_one_side<'info>(
     token_program: AccountInfo<'info>,
     authority: AccountInfo<'info>,
@@ -517,6 +521,7 @@ fn split_one_side<'info>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn validate_fee_destinations(
     pool: &UncheckedAccount<'_>,
     config: &GlobalConfig,
@@ -599,11 +604,19 @@ fn keeper_fee_split_for_mint(
 
 fn parse_pool_creator(pool: &UncheckedAccount<'_>) -> Result<Pubkey> {
     let data = pool.try_borrow_data()?;
-    require!(data.len() >= 40, LaunchpadError::InvalidPoolParams);
-    let creator_bytes: [u8; 32] = data[8..40]
-        .try_into()
-        .map_err(|_| error!(LaunchpadError::InvalidPoolParams))?;
-    Ok(Pubkey::new_from_array(creator_bytes))
+    if data.starts_with(BondingCurvePool::DISCRIMINATOR) {
+        let mut slice: &[u8] = &data;
+        let pool = BondingCurvePool::try_deserialize(&mut slice)
+            .map_err(|_| error!(LaunchpadError::InvalidPoolParams))?;
+        return Ok(pool.creator);
+    }
+    if data.starts_with(PresalePool::DISCRIMINATOR) {
+        let mut slice: &[u8] = &data;
+        let pool = PresalePool::try_deserialize(&mut slice)
+            .map_err(|_| error!(LaunchpadError::InvalidPoolParams))?;
+        return Ok(pool.creator);
+    }
+    err!(LaunchpadError::InvalidPoolParams)
 }
 
 pub fn fee_split_is_valid(

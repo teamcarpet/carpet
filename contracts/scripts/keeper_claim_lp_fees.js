@@ -64,7 +64,7 @@ async function harvestAndSplit({ program, provider, buybackState, buybackStatePd
   )[0];
   const config = await program.account.globalConfig.fetch(configPda);
   const creator = await getPoolCreator(program, buybackState);
-  const keeper = provider.wallet.publicKey;
+  const keeper = config.keeperWallet;
   const position = derivePositionAddress(buybackState.positionNftMint);
   const positionNftAccount = derivePositionNftAccount(buybackState.positionNftMint);
   const meteoraTokenAVault = deriveTokenVaultAddress(NATIVE_MINT, buybackState.meteoraPool);
@@ -129,11 +129,15 @@ async function harvestAndSplit({ program, provider, buybackState, buybackStatePd
   const txSig = await program.methods
     .harvestAndSplitLpFees()
     .accounts({
-      payer: keeper,
+      payer: provider.wallet.publicKey,
+      config: configPda,
       buybackState: buybackStatePda,
       lpCustody: buybackState.lpCustody,
       tokenAFeeVault,
       tokenBFeeVault,
+      creatorWallet: creator,
+      protocolWallet: config.platformWallet,
+      pool: buybackState.pool,
       creatorFeeAccountA: creatorFeeAccountA.address,
       protocolFeeAccountA: protocolFeeAccountA.address,
       keeperFeeAccountA: keeperFeeAccountA.address,
