@@ -29,6 +29,32 @@
     padding-bottom: 22px !important;
   }
 }
+
+/* ── Bigger sidebar icons & logos (desktop) ── */
+@media (min-width: 769px) {
+  /* Wider sidebar so icons have room */
+  :root { --sb-w: 60px !important; }
+
+  /* Header logo */
+  .sb-top { height: 64px !important; }
+  #sb .logo-mark { width: 40px !important; height: 40px !important; }
+  #sb .logo-text { font-size: 17px !important; }
+
+  /* Nav items: Home / Bubble Map / Profile */
+  #sb .sbi { height: 48px !important; padding: 0 16px !important; }
+  #sb .sbi-ico { font-size: 22px !important; width: 28px !important; }
+
+  /* Bottom buttons: Launch (rocket) / Swap */
+  #sb .sb-btn { width: 38px !important; height: 38px !important; font-size: 17px !important; }
+}
+
+/* ── Bigger footer logo (all viewports) ── */
+#footer .logo-mark[style*="26px"] {
+  width: 36px !important;
+  height: 36px !important;
+}
+#footer .logo-text { font-size: 18px !important; }
+#footer .foot-tagline { font-size: 11px !important; }
 </style>
 <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
