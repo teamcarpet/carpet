@@ -7,7 +7,10 @@
   },
   "scripts": {
     "keeper:dry-run": "DRY_RUN=1 node scripts/keeper_claim_lp_fees.js",
-    "keeper:run": "node scripts/keeper_claim_lp_fees.js"
+    "keeper:run": "node scripts/keeper_claim_lp_fees.js",
+    "keeper:migrate": "node scripts/keeper_auto_migrate.js",
+    "keeper:migrate:loop": "KEEPER_MODE=loop node scripts/keeper_auto_migrate.js",
+    "keeper:migrate:dry-run": "DRY_RUN=1 node scripts/keeper_auto_migrate.js"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
