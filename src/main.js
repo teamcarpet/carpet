@@ -664,4 +664,24 @@ export function init() {
   }
 }
 
+// Expose all public functions to window for inline HTML handlers — at module top-level
+// so they're available BEFORE init() runs (prevents "walletClick is not defined" on early clicks)
+window._app = {
+  walletClick, disconnectWalletUI, toggleWMenu, closeWMenu, copyAddrUI, openSolscan,
+  toggleSb, setView, goProfile,
+  openDet,
+  openEditToken, closeEditToken, saveEditToken,
+  openSwap, closeSwap, flipSwap, cswap, doSwap,
+  openLaunch, closeLaunch, selMode, selPresaleMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,
+  claimCreatorForToken, migrateToken, claimFeesForToken,
+  previewImage,
+  pfTab,
+  cMove, setColSort, filterSearch,
+  showN,
+  renderProfile, openEditProfile, closeEditProfile,
+  uploadProfileAvatar, uploadProfileBanner,
+  saveProfile: saveProfileFn, shareProfile,
+};
+Object.entries(window._app).forEach(([k, v]) => { window[k] = v; });
+window.copyAddr = window.copyAddrUI;
 init();
