@@ -114,8 +114,8 @@ export async function signAndSendTransaction(transaction) {
   if (!_provider || !_pubkey) throw new Error('Wallet not connected');
   const conn = new Connection(CONFIG.solanaRpc, 'confirmed');
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-  transaction.recentBlockhash = blockhash;
-  transaction.feePayer = _pubkey;
+  if (!transaction.recentBlockhash) transaction.recentBlockhash = blockhash;
+  if (!transaction.feePayer) transaction.feePayer = _pubkey;
 
   const signed = await _provider.signTransaction(transaction);
   const sig = await conn.sendRawTransaction(signed.serialize());
