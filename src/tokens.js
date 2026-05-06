@@ -3,17 +3,14 @@ import {
 } from '@solana/web3.js';
 import {
   createInitializeMintInstruction,
-  createAssociatedTokenAccountInstruction,
-  createMintToInstruction,
-  getAssociatedTokenAddress,
   MINT_SIZE, TOKEN_PROGRAM_ID,
   getMinimumBalanceForRentExemptMint,
 } from '@solana/spl-token';
 import { CONFIG } from './config.js';
-import { getPublicKey, signAndSendTransaction } from './wallet.js';
+import { getAnchorWallet, getPublicKey, getWalletProvider, signAndSendTransaction } from './wallet.js';
 import { uploadTokenMetadata } from './ipfs.js';
 import { addToken } from './platform.js';
-import { createBondingPool, getProgram } from './launchpad.js';
+import { createLaunchpadPool } from './launchpad.js';
 
 export async function createToken({
   name, symbol, description,
@@ -35,10 +32,7 @@ export async function createToken({
   const conn = new Connection(CONFIG.solanaRpc, 'confirmed');
   const lamports = await getMinimumBalanceForRentExemptMint(conn);
 
-  // 3. ATA for creator
-  const ata = await getAssociatedTokenAddress(mintKp.publicKey, creator);
-
-  // 4. Build transaction
+  // 4. Build mint transaction. The launchpad program requires zero supply and no freeze authority.
   const tx = new Transaction();
   tx.add(
     SystemProgram.createAccount({
@@ -48,9 +42,7 @@ export async function createToken({
       lamports,
       programId: TOKEN_PROGRAM_ID,
     }),
-    createInitializeMintInstruction(mintKp.publicKey, decimals, creator, creator),
-    createAssociatedTokenAccountInstruction(creator, ata, creator, mintKp.publicKey),
-    createMintToInstruction(mintKp.publicKey, ata, creator, supply * Math.pow(10, decimals)),
+    createInitializeMintInstruction(mintKp.publicKey, decimals, creator, null),
   );
   tx.partialSign(mintKp);
 
@@ -61,9 +53,9 @@ export async function createToken({
     const { createUmi } = await import('@metaplex-foundation/umi-bundle-defaults');
     const { createV1, TokenStandard } = await import('@metaplex-foundation/mpl-token-metadata');
     const { publicKey: umiPk } = await import('@metaplex-foundation/umi');
-    const provider = window.phantom?.solana || window.solana;
+    const provider = getWalletProvider();
     const umi = createUmi(CONFIG.solanaRpc);
-    // Attach wallet signer manually using the Phantom provider
+    // Attach wallet signer manually using the selected injected wallet provider.
     umi.use({
       install(u) {
         u.identity = {
@@ -72,7 +64,9 @@ export async function createToken({
             const signed = await provider.signTransaction(tx);
             return signed;
           },
-          signAllTransactions: async (txs) => provider.signAllTransactions(txs),
+          signAllTransactions: async (txs) => provider.signAllTransactions
+            ? provider.signAllTransactions(txs)
+            : Promise.all(txs.map((tx) => provider.signTransaction(tx))),
           signMessage: async (msg) => provider.signMessage(msg),
         };
         u.payer = u.identity;
@@ -90,22 +84,18 @@ export async function createToken({
     console.warn('Metaplex metadata upload skipped:', e.message);
   }
 
-  // 5.5. Create bonding pool on launchpad if mode is bonding
+  // 5.5. Create the launchpad pool. The program mints the supply into its vault.
   let poolSig = null;
-  if (mode === 'bonding') {
-    try {
-      const provider = window.phantom?.solana || window.solana;
-      const wallet = {
-        publicKey: creator,
-        signTransaction: (tx) => provider.signTransaction(tx),
-        signAllTransactions: (txs) => provider.signAllTransactions(txs),
-      };
-      poolSig = await createBondingPool(wallet, mintKp.publicKey);
-      console.log('Bonding pool created:', poolSig);
-    } catch (e) {
-      console.error('Failed to create bonding pool:', e);
-      throw new Error('Pool creation failed: ' + e.message);
-    }
+  try {
+    const wallet = getAnchorWallet();
+    poolSig = await createLaunchpadPool(wallet, mintKp.publicKey, {
+      mode,
+      presaleMode,
+    });
+    console.log('Launchpad pool created:', poolSig);
+  } catch (e) {
+    console.error('Failed to create launchpad pool:', e);
+    throw new Error('Pool creation failed: ' + e.message);
   }
 
   // 6. Register on platform
@@ -126,10 +116,8 @@ export async function createToken({
     sig,
     decimals,
     supply,
-    sig,
     poolSig,
-    decimals,
   });
 
-  return { mint: mintKp.publicKey.toBase58(), sig, token: tokenEntry };
+  return { mint: mintKp.publicKey.toBase58(), sig, poolSig, token: tokenEntry };
 }

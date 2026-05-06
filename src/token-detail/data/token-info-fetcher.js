@@ -33,6 +33,8 @@ export async function fetchTokenInfo(mint) {
     em:        fromStore.em,
     imageUrl:  fromStore.imageUrl,
     creator:   fromStore.creator,
+    mode:      fromStore.mode,
+    col:       fromStore.col,
     createdAt: fromStore.createdAt,
     mc:        fromStore.mc,
     pct:       fromStore.pct,

@@ -128,7 +128,7 @@ export class TradesTable {
         <div class="td-trades-time" data-ts="${r.timestamp || ''}">${fmtAgo(r.timestamp)}</div>
         <div class="td-trades-txn">
           ${r.signature
-            ? `<a href="https://solscan.io/tx/${r.signature}" target="_blank" rel="noopener">${shorten(r.signature, 4)}</a>`
+            ? `<a href="https://solscan.io/tx/${r.signature}?cluster=devnet" target="_blank" rel="noopener">${shorten(r.signature, 4)}</a>`
             : '—'}
         </div>
       </div>

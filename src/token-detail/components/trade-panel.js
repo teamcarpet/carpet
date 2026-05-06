@@ -18,18 +18,22 @@ export class TradePanel {
 
   setInfo(info) {
     this.info = info;
-    this._renderBalance();
+    this._render();
   }
 
   _render() {
     const isBuy = this.side === 'buy';
     const ticker = this.info?.tk || '…';
+    const isPresale = this.info?.mode === 'presale' && !this.info?.isMigrated;
+    const primaryLabel = isPresale
+      ? (isBuy ? 'Contribute' : 'Claim')
+      : (isBuy ? 'Buy' : 'Sell');
 
     this.host.innerHTML = `
       <div class="td-card td-trade">
         <div class="td-trade-tabs">
-          <button class="td-trade-tab ${isBuy  ? 'buy  on' : ''}" data-act="side" data-val="buy">Buy</button>
-          <button class="td-trade-tab ${!isBuy ? 'sell on' : ''}" data-act="side" data-val="sell">Sell</button>
+          <button class="td-trade-tab ${isBuy  ? 'buy  on' : ''}" data-act="side" data-val="buy">${isPresale ? 'Contribute' : 'Buy'}</button>
+          <button class="td-trade-tab ${!isBuy ? 'sell on' : ''}" data-act="side" data-val="sell">${isPresale ? 'Claim' : 'Sell'}</button>
         </div>
 
         <div class="td-trade-row" id="td-trade-bal">
@@ -40,13 +44,14 @@ export class TradePanel {
         <div class="td-trade-inputwrap">
           <input class="td-trade-input"
                  type="number" min="0" step="any"
-                 placeholder="0.00"
+                 placeholder="${isPresale && !isBuy ? 'No amount needed' : '0.00'}"
                  value="${this.amount}"
+                 ${isPresale && !isBuy ? 'disabled' : ''}
                  data-act="amount">
           <div class="td-trade-unit">${isBuy ? 'SOL' : `$${ticker}`}</div>
         </div>
 
-        <div class="td-trade-quick">
+        <div class="td-trade-quick" style="${isPresale && !isBuy ? 'display:none;' : ''}">
           <button class="td-trade-q" data-act="quick" data-val="reset">Reset</button>
           <button class="td-trade-q" data-act="quick" data-val="0.1">0.1 SOL</button>
           <button class="td-trade-q" data-act="quick" data-val="0.5">0.5 SOL</button>
@@ -55,11 +60,11 @@ export class TradePanel {
         </div>
 
         <button class="td-trade-submit ${isBuy ? 'buy' : 'sell'}" data-act="submit">
-          ${isBuy ? 'Buy' : 'Sell'} $${ticker}
+          ${primaryLabel} $${ticker}
         </button>
 
         <div class="td-trade-info">
-          ${isBuy ? 'Fee 1% · Max 1% supply' : 'Fee 1% · Tax 24% → buyback'}
+          ${isPresale ? (isBuy ? 'Presale fee 1% · Max 1% target' : 'Available after migration') : (isBuy ? 'Fee 1% · Max 1% supply' : 'Fee 1% · Tax 24% → buyback')}
         </div>
       </div>
     `;
@@ -98,12 +103,13 @@ export class TradePanel {
 
   async _submit() {
     const amt = parseFloat(this.amount);
-    if (!amt || amt <= 0) return;
+    const isClaim = this.info?.mode === 'presale' && !this.info?.isMigrated && this.side === 'sell';
+    if (!isClaim && (!amt || amt <= 0)) return;
     const btn = this.host.querySelector('[data-act="submit"]');
     btn.disabled = true;
     btn.textContent = 'Processing…';
     try {
-      await this.onTrade?.({ mint: this.mint, side: this.side, amount: amt });
+      await this.onTrade?.({ mint: this.mint, side: isClaim ? 'claimPresale' : this.side, amount: amt });
     } catch (err) {
       console.error('[trade] failed', err);
     } finally {

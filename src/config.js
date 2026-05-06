@@ -12,8 +12,9 @@ export const CONFIG = {
 
   // Launchpad program
   LAUNCHPAD: {
-    programId: import.meta.env.VITE_LAUNCHPAD_PROGRAM_ID || 'CtQZ1K5vxoYDZoPgEubC8fM7KnjJuxe2CJyFMgo5wd7X',
+    programId: import.meta.env.VITE_LAUNCHPAD_PROGRAM_ID || 'DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV',
     cluster: import.meta.env.VITE_LAUNCHPAD_CLUSTER || 'devnet',
+    meteoraPoolConfig: import.meta.env.VITE_METEORA_POOL_CONFIG || '3KLdspUofc75aaEAJdBo1o6D6cyzXJVtGB8PgpWJEiaR',
   },
 
   // Well-known Solana token mints
