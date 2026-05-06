@@ -44,6 +44,9 @@ export async function createToken({
     }),
     createInitializeMintInstruction(mintKp.publicKey, decimals, creator, null),
   );
+  const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+  tx.recentBlockhash = blockhash;
+  tx.feePayer = creator;
   tx.partialSign(mintKp);
 
   const sig = await signAndSendTransaction(tx);
