@@ -425,7 +425,15 @@ function showOnly(...ids) {
  ids.forEach(id => document.getElementById(id).style.display = 'block');
 }
 function stepUI(a) { for (let i = 1; i <= 4; i++) { const el = document.getElementById('s' + i); el.classList.toggle('on', i === a); el.classList.toggle('done', i < a); } }
-export function openLaunch() { document.getElementById('lm').classList.add('open'); goStep1(); }
+export async function openLaunch() {
+  if (!isConnected()) {
+    showN('Connect wallet to launch a token');
+    await walletClick();
+    if (!isConnected()) return;
+  }
+  document.getElementById('lm').classList.add('open');
+  goStep1();
+}
 export function closeLaunch() { document.getElementById('lm').classList.remove('open'); imageFileGlobal = null; }
 export function selMode(m) { selM = m; document.getElementById('mbc').classList.toggle('sel', m === 'bonding'); document.getElementById('mps').classList.toggle('sel', m === 'presale'); }
 export function goStep1() { selM = null; document.querySelectorAll('.mcard').forEach(c => c.classList.remove('sel')); stepUI(1); showOnly('llobby'); }
