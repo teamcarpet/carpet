@@ -16,13 +16,13 @@ function write(key, data) {
 
 export function getTokens() { return read(TOKENS_KEY); }
 
-export function getToken(id) { return getTokens().find(t => t.id === id) || null; }
+export function getToken(id) { return getTokens().find(t => String(t.id) === String(id)) || null; }
 
 export function addToken(token) {
   const tokens = getTokens();
   const entry = {
     ...token,
-    id: token.id || Date.now(),
+    id: String(token.id || Date.now()),
     createdAt: Date.now(),
     col: 'new',
     prog: 0,
