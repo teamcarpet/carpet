@@ -86,8 +86,9 @@ pub mod launchpad {
         ctx: Context<SellBonding>,
         token_amount: u64,
         min_sol_out: u64,
+        expected_sell_tax_bps: u16,
     ) -> Result<()> {
-        instructions::handle_sell_bonding(ctx, token_amount, min_sol_out)
+        instructions::handle_sell_bonding(ctx, token_amount, min_sol_out, expected_sell_tax_bps)
     }
 
     // ── Presale ─────────────────────────────────────────────────────────

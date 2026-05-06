@@ -2,7 +2,7 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const suffix = process.env.VANITY_SUFFIX || process.argv[2] || "rug";
+const suffix = process.env.VANITY_SUFFIX || process.argv[2] || "";
 const count = Number(process.env.VANITY_COUNT || process.argv[3] || 5);
 const threads = Number(process.env.VANITY_THREADS || process.argv[4] || 8);
 

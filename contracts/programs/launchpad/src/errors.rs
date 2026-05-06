@@ -66,6 +66,9 @@ pub enum LaunchpadError {
     #[msg("Slippage tolerance exceeded")]
     SlippageExceeded,
 
+    #[msg("Unexpected sell tax basis points")]
+    UnexpectedSellTaxBps,
+
     #[msg("Minimum output must be greater than zero")]
     InvalidMinTokensOut,
 

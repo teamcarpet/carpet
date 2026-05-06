@@ -13,7 +13,7 @@ pub struct ClaimCreatorTokens<'info> {
         bump = config.bump,
         constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
-    pub config: Account<'info, GlobalConfig>,
+    pub config: Box<Account<'info, GlobalConfig>>,
 
     #[account(
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
@@ -22,7 +22,7 @@ pub struct ClaimCreatorTokens<'info> {
         constraint = pool.is_migrated @ LaunchpadError::NotMigrated,
         constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
-    pub pool: Account<'info, PresalePool>,
+    pub pool: Box<Account<'info, PresalePool>>,
 
     #[account(
         mut,
@@ -31,7 +31,7 @@ pub struct ClaimCreatorTokens<'info> {
         constraint = buyback_state.pool == pool.key() @ LaunchpadError::InvalidPoolParams,
         constraint = buyback_state.pool_type == 1 @ LaunchpadError::InvalidPoolParams,
     )]
-    pub buyback_state: Account<'info, BuybackState>,
+    pub buyback_state: Box<Account<'info, BuybackState>>,
 
     #[account(
         mut,
@@ -40,14 +40,14 @@ pub struct ClaimCreatorTokens<'info> {
         seeds = [PresalePool::TOKEN_VAULT_SEED, pool.mint.as_ref()],
         bump = pool.token_vault_bump,
     )]
-    pub token_vault: Account<'info, TokenAccount>,
+    pub token_vault: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
         token::mint = pool.mint,
         token::authority = creator,
     )]
-    pub creator_token_account: Account<'info, TokenAccount>,
+    pub creator_token_account: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 }

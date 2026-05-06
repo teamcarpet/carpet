@@ -78,10 +78,12 @@ pub struct PresalePool {
     pub sol_vault_bump: u8,
     /// Token vault bump
     pub token_vault_bump: u8,
+    /// Number of contributor claims already processed.
+    pub claimed_contributors: u32,
 }
 
 impl PresalePool {
-    pub const SPACE: usize = 110;
+    pub const SPACE: usize = 114;
     pub const SEED: &'static [u8] = b"presale_pool";
     pub const SOL_VAULT_SEED: &'static [u8] = b"presale_sol_vault";
     pub const TOKEN_VAULT_SEED: &'static [u8] = b"presale_token_vault";

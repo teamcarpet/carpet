@@ -229,7 +229,7 @@ describe("launchpad", () => {
       await provider.connection.confirmTransaction(sig2);
 
       // Create token mint (creator is authority, 6 decimals)
-      const mintKeypair = findVanityKeypair("rug");
+      const mintKeypair = findVanityKeypair("");
       mint = await createMint(
         provider.connection,
         creator,
@@ -394,7 +394,7 @@ describe("launchpad", () => {
       const solBefore = await provider.connection.getBalance(buyer.publicKey);
 
       await program.methods
-        .sellBonding(sellAmount, new BN(0)) // min_sol_out = 0 for test
+        .sellBonding(sellAmount, new BN(0), 2400) // min_sol_out = 0 for test
         .accounts({
           seller: buyer.publicKey,
           config: configPda,
@@ -444,7 +444,7 @@ describe("launchpad", () => {
         await provider.connection.confirmTransaction(sig);
       }
 
-      const mintKeypair = findVanityKeypair("rug");
+      const mintKeypair = findVanityKeypair("");
       mint = await createMint(
         provider.connection,
         creator,

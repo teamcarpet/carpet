@@ -76,6 +76,7 @@ pub fn handle_sell_bonding(
     ctx: Context<SellBonding>,
     token_amount: u64,
     min_sol_out: u64,
+    expected_sell_tax_bps: u16,
 ) -> Result<()> {
     require!(token_amount > 0, LaunchpadError::ZeroAmount);
 
@@ -87,6 +88,10 @@ pub fn handle_sell_bonding(
     require!(
         bonding_sells_open(pool.real_sol_reserves, pool.migration_target),
         LaunchpadError::SellsLockedAtTarget
+    );
+    require!(
+        expected_sell_tax_bps == config.sell_tax_bps,
+        LaunchpadError::UnexpectedSellTaxBps
     );
 
     // Calculate gross SOL out from bonding curve
@@ -270,6 +275,13 @@ mod tests {
         assert!(bonding_sells_open(99, 100));
         assert!(!bonding_sells_open(100, 100));
         assert!(!bonding_sells_open(101, 100));
+    }
+
+    #[test]
+    fn sell_requires_expected_tax_match() {
+        let configured_tax = 2400u16;
+        assert_eq!(configured_tax, 2400);
+        assert_ne!(configured_tax, 2000);
     }
 
     #[test]

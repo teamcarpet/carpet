@@ -2,7 +2,7 @@ const { Connection, Keypair } = require("@solana/web3.js");
 const fs = require("fs");
 const path = require("path");
 
-const suffix = process.env.VANITY_SUFFIX || process.argv[2] || "rug";
+const suffix = process.env.VANITY_SUFFIX || process.argv[2] || "";
 const url = process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
 const poolDir = path.join(__dirname, "..", "target", "vanity-mints");
 

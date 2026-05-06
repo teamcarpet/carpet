@@ -202,6 +202,14 @@ pub fn derive_event_authority() -> Pubkey {
     Pubkey::find_program_address(&[EVENT_AUTHORITY_SEED], &METEORA_PROGRAM_ID).0
 }
 
+pub fn derive_position_nft_account(position_nft_mint: &Pubkey) -> Pubkey {
+    Pubkey::find_program_address(
+        &[b"position_nft_account", position_nft_mint.as_ref()],
+        &METEORA_PROGRAM_ID,
+    )
+    .0
+}
+
 // ── Swap CPI ────────────────────────────────────────────────────────────
 
 /// Accounts required by Meteora's `swap` instruction.

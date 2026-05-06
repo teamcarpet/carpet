@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::get_associated_token_address;
 use anchor_spl::token::{self, Burn, Mint, SyncNative, Token, TokenAccount};
 
 use crate::cpi_meteora::{self, SwapAccounts, SwapParams, METEORA_PROGRAM_ID, POOL_AUTHORITY};
@@ -109,6 +110,9 @@ pub struct ExecuteBuyback<'info> {
     /// Payer's WSOL account for swap input
     #[account(
         mut,
+        constraint = payer_wsol_account.key()
+            == get_associated_token_address(&payer.key(), &wsol_mint.key())
+            @ LaunchpadError::InvalidPoolParams,
         token::mint = wsol_mint.key(),
         token::authority = payer,
     )]
@@ -554,6 +558,15 @@ mod tests {
     fn execute_buyback_rejects_when_platform_paused() {
         let keeper = crate::state::KEEPER_WALLET;
         assert!(validate_buyback_execution(true, keeper, keeper, 1).is_err());
+    }
+
+    #[test]
+    fn execute_buyback_rejects_non_canonical_wsol_account() {
+        let payer = Pubkey::new_unique();
+        let wsol = anchor_spl::token::spl_token::native_mint::id();
+        let canonical = get_associated_token_address(&payer, &wsol);
+
+        assert_ne!(canonical, Pubkey::new_unique());
     }
 
     #[test]

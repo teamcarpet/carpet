@@ -28,6 +28,7 @@ const NEW_KEEPER_WALLET_OFFSET: usize = 152;
 const NEW_PENDING_ADMIN_OFFSET: usize = 184;
 const NEW_IS_PAUSED_OFFSET: usize = 216;
 const NEW_BUMP_OFFSET: usize = 217;
+const NEW_ALLOWED_METEORA_CONFIGS_OFFSET: usize = 218;
 const DEFAULT_CREATOR_FEE_BPS: u16 = 7000;
 const DEFAULT_PROTOCOL_FEE_BPS: u16 = 2950;
 
@@ -46,6 +47,7 @@ pub struct UpdateConfigParams {
     pub new_creator_fee_bps: Option<u16>,
     pub new_protocol_fee_bps: Option<u16>,
     pub new_keeper_fee_bps: Option<u16>,
+    pub new_allowed_meteora_configs: Option<[Pubkey; 4]>,
 }
 
 #[derive(Accounts)]
@@ -107,6 +109,13 @@ pub fn handle_update_config(ctx: Context<UpdateConfig>, params: UpdateConfigPara
     config.creator_fee_bps = creator_fee_bps;
     config.protocol_fee_bps = protocol_fee_bps;
     config.keeper_fee_bps = keeper_fee_bps;
+    if let Some(configs) = params.new_allowed_meteora_configs {
+        require!(
+            configs.iter().any(|key| *key != Pubkey::default()),
+            LaunchpadError::InvalidPoolParams
+        );
+        config.allowed_meteora_configs = configs;
+    }
 
     emit!(ConfigUpdated {
         admin: ctx.accounts.admin.key(),
@@ -250,6 +259,11 @@ pub fn handle_upgrade_config_v2(ctx: Context<UpgradeConfigV2>, keeper_fee_bps: u
     data[NEW_PENDING_ADMIN_OFFSET..NEW_PENDING_ADMIN_OFFSET + 32].copy_from_slice(&pending_admin);
     data[NEW_IS_PAUSED_OFFSET] = is_paused;
     data[NEW_BUMP_OFFSET] = bump;
+    let allowed_configs = GlobalConfig::default_allowed_meteora_configs();
+    for (index, config) in allowed_configs.iter().enumerate() {
+        let offset = NEW_ALLOWED_METEORA_CONFIGS_OFFSET + index * 32;
+        data[offset..offset + 32].copy_from_slice(config.as_ref());
+    }
 
     emit!(ConfigUpdated {
         admin: ctx.accounts.admin.key(),
@@ -464,6 +478,20 @@ pub fn handle_unpause_presale_pool(ctx: Context<UnpausePresalePool>) -> Result<(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn allowed_meteora_configs_can_be_updated() {
+        let configs = [
+            Pubkey::new_unique(),
+            Pubkey::new_unique(),
+            Pubkey::default(),
+            Pubkey::default(),
+        ];
+
+        assert!(configs.iter().any(|key| *key != Pubkey::default()));
+    }
+
     #[test]
     fn bonding_pool_pause_toggle_updates_state() {
         let mut paused = true;

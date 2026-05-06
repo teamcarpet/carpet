@@ -80,6 +80,7 @@ pub fn handle_initialize(ctx: Context<Initialize>, params: InitializeParams) -> 
     config.pending_admin = Pubkey::default();
     config.is_paused = false;
     config.bump = ctx.bumps.config;
+    config.allowed_meteora_configs = GlobalConfig::default_allowed_meteora_configs();
 
     emit!(ConfigUpdated {
         admin: ctx.accounts.admin.key(),

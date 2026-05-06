@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub const KEEPER_WALLET: Pubkey = pubkey!("3C6H3pudeYKfMqqc68j9Gk1xXnRAvgwsJGqWH9aBF61n");
-pub const ALLOWED_METEORA_POOL_CONFIG: Pubkey =
+pub const DEFAULT_METEORA_POOL_CONFIG: Pubkey =
     pubkey!("3KLdspUofc75aaEAJdBo1o6D6cyzXJVtGB8PgpWJEiaR");
 pub const ACTIVATION_DELAY_SLOTS: u64 = 150;
 
@@ -44,8 +44,57 @@ pub struct GlobalConfig {
 
     /// PDA bump
     pub bump: u8,
+
+    /// Allowed Meteora pool configs for migrations.
+    pub allowed_meteora_configs: [Pubkey; 4],
 }
 
 impl GlobalConfig {
     pub const SEED: &'static [u8] = b"config";
+
+    pub fn default_allowed_meteora_configs() -> [Pubkey; 4] {
+        [
+            DEFAULT_METEORA_POOL_CONFIG,
+            Pubkey::default(),
+            Pubkey::default(),
+            Pubkey::default(),
+        ]
+    }
+
+    pub fn allows_meteora_pool_config(&self, config: &Pubkey) -> bool {
+        self.allowed_meteora_configs
+            .iter()
+            .any(|allowed| allowed == config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_allowed_meteora_config_is_approved() {
+        let config = GlobalConfig {
+            admin: Pubkey::default(),
+            pause_authority: Pubkey::default(),
+            dev_wallet: Pubkey::default(),
+            platform_wallet: Pubkey::default(),
+            dev_fee_bps: 0,
+            platform_fee_bps: 0,
+            sell_tax_bps: 0,
+            presale_platform_fee_bps: 0,
+            migration_fee_bps: 0,
+            creator_fee_bps: 0,
+            protocol_fee_bps: 0,
+            keeper_fee_bps: 0,
+            keeper_wallet: KEEPER_WALLET,
+            pending_admin: Pubkey::default(),
+            is_paused: false,
+            bump: 0,
+            allowed_meteora_configs: GlobalConfig::default_allowed_meteora_configs(),
+        };
+
+        assert!(config.allows_meteora_pool_config(&DEFAULT_METEORA_POOL_CONFIG));
+        assert!(!config.allows_meteora_pool_config(&Pubkey::new_unique()));
+    }
 }

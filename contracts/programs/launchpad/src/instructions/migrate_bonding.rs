@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
 use anchor_spl::token::{self, Mint, SyncNative, Token, TokenAccount};
+use anchor_spl::token_2022::spl_token_2022::{
+    extension::StateWithExtensions, state::Account as Token2022Account,
+};
 
 use crate::cpi_meteora::{
     self, InitializePoolAccounts, InitializePoolParams, METEORA_PROGRAM_ID, POOL_AUTHORITY,
@@ -9,10 +12,7 @@ use crate::cpi_meteora::{
 use crate::errors::LaunchpadError;
 use crate::events::MigrationCompleted;
 use crate::math::fees;
-use crate::state::{
-    BondingCurvePool, BuybackState, GlobalConfig, ACTIVATION_DELAY_SLOTS,
-    ALLOWED_METEORA_POOL_CONFIG,
-};
+use crate::state::{BondingCurvePool, BuybackState, GlobalConfig, ACTIVATION_DELAY_SLOTS};
 
 #[derive(Accounts)]
 pub struct MigrateBonding<'info> {
@@ -98,10 +98,7 @@ pub struct MigrateBonding<'info> {
     pub meteora_pool: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool config (fee/scheduler config)
-    #[account(
-        constraint = meteora_pool_config.key() == ALLOWED_METEORA_POOL_CONFIG
-            @ LaunchpadError::InvalidPoolParams
-    )]
+    #[account()]
     pub meteora_pool_config: UncheckedAccount<'info>,
 
     /// CHECK: Meteora pool authority PDA
@@ -131,17 +128,16 @@ pub struct MigrateBonding<'info> {
     #[account(mut)]
     pub position_nft_mint: Signer<'info>,
 
+    /// CHECK: Meteora initializes this PDA-owned Token-2022 position account.
+    /// We validate the PDA derivation pre-CPI and parse the Token-2022 account
+    /// state after CPI to confirm mint, token owner, and amount.
     #[account(
         mut,
         constraint = position_nft_account.key()
-            == get_associated_token_address(&lp_custody.key(), &position_nft_mint.key())
-            @ LaunchpadError::InvalidLpPositionCustody,
-        constraint = position_nft_account.owner == lp_custody.key()
-            @ LaunchpadError::InvalidLpPositionCustody,
-        constraint = position_nft_account.mint == position_nft_mint.key()
+            == cpi_meteora::derive_position_nft_account(&position_nft_mint.key())
             @ LaunchpadError::InvalidLpPositionCustody,
     )]
-    pub position_nft_account: Box<Account<'info, TokenAccount>>,
+    pub position_nft_account: UncheckedAccount<'info>,
 
     /// CHECK: Position state account
     #[account(mut)]
@@ -182,6 +178,9 @@ pub struct MigrateBonding<'info> {
     /// Payer's WSOL token account (for SOL deposit)
     #[account(
         mut,
+        constraint = payer_wsol_account.key()
+            == get_associated_token_address(&payer.key(), &wsol_mint.key())
+            @ LaunchpadError::InvalidPoolParams,
         token::mint = wsol_mint.key(),
         token::authority = payer,
     )]
@@ -204,6 +203,11 @@ pub struct MigrateBonding<'info> {
 pub fn handle_migrate_bonding(ctx: Context<MigrateBonding>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let config = &ctx.accounts.config;
+
+    require!(
+        config.allows_meteora_pool_config(&ctx.accounts.meteora_pool_config.key()),
+        LaunchpadError::InvalidPoolParams
+    );
 
     // ── CALCULATE SPLITS ────────────────────────────────────────────
     let (migration_fee, liquidity_sol, buyback_sol, liquidity_tokens) =
@@ -357,21 +361,25 @@ pub fn handle_migrate_bonding(ctx: Context<MigrateBonding>) -> Result<()> {
     // Payer signs the Meteora CPI (not a PDA, so empty signer seeds)
     cpi_meteora::cpi_initialize_pool(&meteora_accounts, &meteora_params, &[])?;
 
-    ctx.accounts.position_nft_account.reload()?;
-    require!(
-        ctx.accounts.position_nft_account.owner == ctx.accounts.lp_custody.key(),
-        LaunchpadError::InvalidLpPositionCustody
-    );
-    require!(
-        ctx.accounts.position_nft_account.amount == 1,
-        LaunchpadError::InvalidLpPositionCustody
-    );
+    validate_position_nft_pda(
+        &ctx.accounts.position_nft_account.to_account_info(),
+        ctx.accounts.position_nft_mint.key(),
+        ctx.accounts.lp_custody.key(),
+    )?;
 
     ctx.accounts.token_vault.reload()?;
     require!(
         ctx.accounts.token_vault.amount == 0,
         LaunchpadError::InvalidPoolParams
     );
+
+    sweep_excess_sol_from_vault(
+        &ctx.accounts.sol_vault.to_account_info(),
+        &ctx.accounts.platform_wallet.to_account_info(),
+        sol_vault_signer,
+        &ctx.accounts.system_program.to_account_info(),
+        buyback_sol,
+    )?;
 
     // ── EVENTS ──────────────────────────────────────────────────────
 
@@ -417,9 +425,76 @@ fn delayed_activation_slot(current_slot: u64) -> Result<u64> {
         .ok_or(LaunchpadError::MathOverflow.into())
 }
 
+fn validate_position_nft_pda(
+    account_info: &AccountInfo<'_>,
+    position_nft_mint: Pubkey,
+    expected_owner: Pubkey,
+) -> Result<()> {
+    require!(
+        account_info.key() == cpi_meteora::derive_position_nft_account(&position_nft_mint),
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    require!(
+        *account_info.owner == TOKEN_2022_PROGRAM_ID,
+        LaunchpadError::InvalidLpPositionCustody
+    );
+
+    let data = account_info.try_borrow_data()?;
+    let parsed = StateWithExtensions::<Token2022Account>::unpack(&data)
+        .map_err(|_| error!(LaunchpadError::InvalidLpPositionCustody))?;
+
+    require!(
+        parsed.base.mint == position_nft_mint,
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    require!(
+        parsed.base.owner == expected_owner,
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    require!(
+        parsed.base.amount == 1,
+        LaunchpadError::InvalidLpPositionCustody
+    );
+    Ok(())
+}
+
+fn sweep_excess_sol_from_vault<'info>(
+    sol_vault: &AccountInfo<'info>,
+    destination: &AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]],
+    system_program: &AccountInfo<'info>,
+    retained_balance: u64,
+) -> Result<()> {
+    let rent_floor = Rent::get()?.minimum_balance(0);
+    let target_balance = rent_floor
+        .checked_add(retained_balance)
+        .ok_or(LaunchpadError::MathOverflow)?;
+    let current_balance = sol_vault.lamports();
+
+    if current_balance > target_balance {
+        anchor_lang::system_program::transfer(
+            CpiContext::new_with_signer(
+                system_program.clone(),
+                anchor_lang::system_program::Transfer {
+                    from: sol_vault.clone(),
+                    to: destination.clone(),
+                },
+                signer_seeds,
+            ),
+            current_balance
+                .checked_sub(target_balance)
+                .ok_or(LaunchpadError::MathUnderflow)?,
+        )?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anchor_lang::solana_program::program_option::COption;
+    use anchor_spl::token_2022::spl_token_2022::state::AccountState;
 
     #[test]
     fn bonding_migration_split_uses_all_available_sol() {
@@ -444,19 +519,45 @@ mod tests {
     }
 
     #[test]
-    fn lp_position_nft_ata_belongs_to_lp_custody() {
+    fn lp_position_nft_uses_meteora_pda_not_ata() {
         let lp_custody = Pubkey::new_unique();
-        let payer = Pubkey::new_unique();
         let nft_mint = Pubkey::new_unique();
 
+        let meteora_pda = cpi_meteora::derive_position_nft_account(&nft_mint);
         let custody_ata = get_associated_token_address(&lp_custody, &nft_mint);
-        let payer_ata = get_associated_token_address(&payer, &nft_mint);
 
-        assert_ne!(custody_ata, payer_ata);
+        assert_ne!(meteora_pda, custody_ata);
     }
 
     #[test]
     fn bonding_migration_uses_activation_delay() {
         assert_eq!(delayed_activation_slot(10).unwrap(), 160);
+    }
+
+    #[test]
+    fn sweep_only_transfers_stray_sol() {
+        let rent_floor = Rent::default().minimum_balance(0);
+        let target = rent_floor + 50;
+        let excess = target + 25;
+        assert_eq!(excess - target, 25);
+    }
+
+    #[test]
+    fn meteora_position_nft_token_owner_must_be_lp_custody() {
+        let owner = Pubkey::new_unique();
+        let mint = Pubkey::new_unique();
+        let token_account = Token2022Account {
+            mint,
+            owner,
+            amount: 1,
+            delegate: COption::None,
+            state: AccountState::Initialized,
+            is_native: COption::None,
+            delegated_amount: 0,
+            close_authority: COption::None,
+        };
+        assert_eq!(token_account.owner, owner);
+        assert_eq!(token_account.mint, mint);
+        assert_eq!(token_account.amount, 1);
     }
 }

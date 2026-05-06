@@ -148,6 +148,7 @@ pub fn handle_create_presale_pool(
     pool.bump = ctx.bumps.pool;
     pool.sol_vault_bump = ctx.bumps.sol_vault;
     pool.token_vault_bump = ctx.bumps.token_vault;
+    pool.claimed_contributors = 0;
 
     emit!(PoolCreated {
         pool: ctx.accounts.pool.key(),
