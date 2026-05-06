@@ -16,9 +16,9 @@
 //   }
 
 import { getToken } from '../../platform.js';
+import { CONFIG } from '../../config.js';
 
-const API_ROOT = 'http://localhost:3000';
-
+const API_ROOT = CONFIG.apiUrl;
 export async function fetchTokenInfo(mint) {
   // Start from local store — always available.
   const local = getToken?.(null);   // defensive: only exists if platform.js is loaded

@@ -11,9 +11,9 @@
 //   WS wss://api.carpet.fun/trades-stream?mint=X&minSol=0.05
 //     → server pushes { type: 'trade', trade: {...} } for each new trade.
 
-const API_ROOT = 'http://localhost:3000';
-const WS_ROOT = 'ws://localhost:3001';
-
+import { CONFIG } from '../../config.js';
+const API_ROOT = CONFIG.apiUrl;
+const WS_ROOT = CONFIG.wsServerUrl;
 export async function fetchTrades({ mint, limit = 100, minSol = 0 }) {
   try {
     const params = new URLSearchParams({ mint, limit: String(limit) });

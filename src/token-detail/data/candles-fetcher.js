@@ -16,9 +16,10 @@
 // Until the backend exists fetchCandles returns [] and subscribeCandles is a no-op.
 // No hardcoded data. No fake bars. Empty = empty.
 
-const API_ROOT = 'http://localhost:3000';
-const WS_ROOT  = 'ws://localhost:3001';
+import { CONFIG } from '../../config.js';
 
+const API_ROOT = CONFIG.apiUrl;
+const WS_ROOT  = CONFIG.wsServerUrl;
 // ── REST ────────────────────────────────────────────────────────────────────
 
 export async function fetchCandles({ mint, resolution, from, to, countBack, priceMode = 'mcap' }) {
