@@ -24,7 +24,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Network](https://img.shields.io/badge/network-devnet-yellow?style=flat-square)](https://explorer.solana.com/?cluster=devnet)
 
-[**Live demo →**](https://incredible-licorice-3f90ec.netlify.app) &nbsp;·&nbsp; [Domain](https://carpet.fun) &nbsp;·&nbsp; [Smart Contract](#smart-contracts) &nbsp;·&nbsp; [Architecture](#architecture)
+[**Live demo →**](https://www.carpet.money/) &nbsp;·&nbsp; [Website](https://www.carpet.money/) &nbsp;·&nbsp; [Smart Contract](#smart-contracts) &nbsp;·&nbsp; [Architecture](#architecture)
 
 </div>
 
