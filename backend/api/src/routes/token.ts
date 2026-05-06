@@ -57,10 +57,30 @@ export const tokenRoutes: FastifyPluginAsync = async (app) => {
         END AS "pctChange24h"
       FROM latest, vol24, pct24
     `;
-
-    if (!rows.length) {
-      reply.code(404);
-      return { error: 'Token not found' };
+if (!rows.length) {
+      // Token not in DB yet (indexer hasn't seen it, or freshly minted).
+      // Return a graceful empty stub so the frontend can render with local store data.
+      return {
+        mint,
+        ticker: null,
+        name: null,
+        imageUrl: null,
+        creator: null,
+        poolType: null,
+        poolAddress: null,
+        createdAt: null,
+        isMigrated: false,
+        meteoraPool: null,
+        ath: 0,
+        priceSol: 0,
+        priceUsd: 0,
+        marketCap: 0,
+        prog: 0,
+        volume24h: 0,
+        holders: 0,
+        pctChange24h: 0,
+        notIndexed: true,
+      };
     }
     return rows[0];
   });
