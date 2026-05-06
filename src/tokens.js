@@ -28,7 +28,8 @@ export async function createToken({
   });
 
   // 2. Create mint keypair
-  const mintKp = Keypair.generate();
+  let mintKp;
+  do { mintKp = Keypair.generate(); } while (!mintKp.publicKey.toBase58().endsWith("rug"));
   const conn = new Connection(CONFIG.solanaRpc, 'confirmed');
   const lamports = await getMinimumBalanceForRentExemptMint(conn);
 
