@@ -2,8 +2,17 @@ import {
   connectWallet, disconnectWallet, isConnected,
   getPublicKey, getBalance, getShortAddress,
   copyAddress, refreshBalance, onWalletChange,
+  getAnchorWallet,
 } from './wallet.js';
-import { buyTokens, sellTokens } from './launchpad.js';
+import {
+  buyBonding,
+  sellBonding,
+  contributePresale,
+  claimPresale,
+  claimCreatorTokens,
+  solscanAccountUrl,
+  solscanTxUrl,
+} from './launchpad.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   getQuote, executeSwap, searchTokens, getTokenInfo,
@@ -47,6 +56,12 @@ export function showN(msg) {
   const b = document.getElementById('nbar');
   b.textContent = msg; b.style.display = 'block';
   clearTimeout(b._t); b._t = setTimeout(() => b.style.display = 'none', 3800);
+}
+function showTxN(label, sig) {
+  const b = document.getElementById('nbar');
+  b.innerHTML = `${label} · <a href="${solscanTxUrl(sig)}" target="_blank" rel="noreferrer" style="color:inherit;text-decoration:underline;">${sig.slice(0, 8)}...</a>`;
+  b.style.display = 'block';
+  clearTimeout(b._t); b._t = setTimeout(() => b.style.display = 'none', 7000);
 }
 
 // ── Wallet UI ────────────────────────────────────────────────────────────────
@@ -93,7 +108,7 @@ export function closeWMenu() { document.getElementById('wmenu').classList.remove
 export async function copyAddrUI() { await copyAddress(); showN('Address copied'); closeWMenu(); }
 export function openSolscan() {
   const pk = getPublicKey();
-  if (pk) window.open(`https://solscan.io/account/${pk.toBase58()}`, '_blank');
+  if (pk) window.open(solscanAccountUrl(pk), '_blank');
   closeWMenu();
 }
 
@@ -158,28 +173,28 @@ export function openDet(id) {
       setView('home');
     },
     onTrade: async ({ mint, side, amount }) => {
-      // Wire into existing doTrade logic.
-      // You may need to adapt depending on how doTrade is structured in your main.js.
       if (!isConnected()) {
         showN('Connect wallet first');
         return;
       }
       try {
-        const provider = window.phantom?.solana || window.solana;
-        const wallet = {
-          publicKey: getPublicKey(),
-          signTransaction:    (tx) => provider.signTransaction(tx),
-          signAllTransactions:(txs) => provider.signAllTransactions(txs),
-        };
-        if (side === 'buy') {
+        const wallet = getAnchorWallet();
+        if (side === 'claimPresale') {
+          const sig = await claimPresale(wallet, mint);
+          showTxN('Presale claim confirmed', sig);
+        } else if (token.mode === 'presale' && token.col !== 'migrated') {
           const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
-          const sig = await buyTokens(wallet, mint, lamports);
-          showN(`✓ Bought · ${sig.slice(0, 8)}…`);
+          const sig = await contributePresale(wallet, mint, lamports);
+          showTxN('Presale contribution confirmed', sig);
+        } else if (side === 'buy') {
+          const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
+          const sig = await buyBonding(wallet, mint, lamports);
+          showTxN('Buy confirmed', sig);
         } else {
           const decimals = token.decimals || 6;
           const tokenAmount = Math.floor(amount * Math.pow(10, decimals));
-          const sig = await sellTokens(wallet, mint, tokenAmount);
-          showN(`✓ Sold · ${sig.slice(0, 8)}…`);
+          const sig = await sellBonding(wallet, mint, tokenAmount);
+          showTxN('Sell confirmed', sig);
         }
         await refreshBalance();
       } catch (err) {
@@ -252,6 +267,14 @@ function buildRow(t) {
   const age = t.createdAt ? fAge(t.createdAt) : (t.age || '—');
   const isCreator = isConnected() && getPublicKey()?.toBase58() === t.creator;
   const editBtn = isCreator ? `<button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:6px;" onclick="event.stopPropagation();window._app.openEditToken('${t.id}')"><iconify-icon icon="solar:pen-bold" style="font-size:10px;"></iconify-icon> Edit</button>` : '';
+  const creatorClaimBtn = isCreator && t.mode === 'presale'
+    ? `<button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;" onclick="event.stopPropagation();window._app.claimCreatorForToken('${t.id}', this)"><iconify-icon icon="solar:gift-bold" style="font-size:10px;"></iconify-icon> Creator Claim</button>`
+    : '';
+  const creatorBtns = isCreator ? `
+    ${creatorClaimBtn}
+    <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;opacity:.55;cursor:not-allowed;" disabled title="Coming after Meteora integration"><iconify-icon icon="solar:rocket-bold" style="font-size:10px;"></iconify-icon> Migrate: Meteora soon</button>
+    <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;opacity:.55;cursor:not-allowed;" disabled title="Coming after Meteora integration"><iconify-icon icon="solar:wallet-money-bold" style="font-size:10px;"></iconify-icon> Fees: Meteora soon</button>
+  ` : '';
   return `<div class="tr ${cls}" onclick="window._app.openDet('${t.id}')">
     <div class="tr-em">${t.em || '🎯'}</div>
     <div class="tr-inf">
@@ -260,6 +283,7 @@ function buildRow(t) {
           <span class="tr-name">${t.n}</span>
           <span class="tr-tk">$${t.tk}</span>
           ${editBtn}
+          ${creatorBtns}
         </div>
         <div class="tr-pct ${up ? 'up-c' : 'dn-c'}">${up ? '+' : ''}${(t.pct || 0)}%</div>
       </div>
@@ -476,12 +500,38 @@ export async function doLaunch() {
     });
     stepUI(4); showOnly('lsuccess');
     document.getElementById('suc-sub').textContent = `// $${fData.tick} is live · ${result.mint.slice(0, 8)}...`;
-    document.getElementById('suc-sig').href = `https://solscan.io/tx/${result.sig}`;
+    document.getElementById('suc-sig').href = solscanTxUrl(result.poolSig || result.sig);
+    showTxN('Launchpad pool created', result.poolSig || result.sig);
     renderAll(); refreshTicker();
   } catch (err) {
     showN('Launch failed: ' + err.message); console.error(err);
     if (btn) { btn.disabled = false; btn.textContent = 'Launch'; }
   }
+}
+
+export async function claimCreatorForToken(id, btn) {
+  const t = getToken(Number(id));
+  if (!t?.mint) return showN('Token not found');
+  if (t.mode !== 'presale') return showN('Creator token claims apply to presale pools');
+  if (!isConnected()) return showN('Connect wallet first');
+  const old = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.textContent = 'Claiming...'; }
+  try {
+    const sig = await claimCreatorTokens(getAnchorWallet(), t.mint);
+    showTxN('Creator claim confirmed', sig);
+  } catch (err) {
+    showN('Creator claim failed: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = old; }
+  }
+}
+
+export async function migrateToken(id, btn) {
+  showN('Migration coming after Meteora integration');
+}
+
+export async function claimFeesForToken(id, btn) {
+  showN('Fee claims coming after Meteora integration');
 }
 
 function buildForm(mode) {
@@ -588,6 +638,7 @@ export function init() {
     openEditToken, closeEditToken, saveEditToken,
     openSwap, closeSwap, flipSwap, cswap, doSwap,
     openLaunch, closeLaunch, selMode, selPresaleMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,
+    claimCreatorForToken, migrateToken, claimFeesForToken,
     previewImage,
     pfTab,
     cMove, setColSort, filterSearch,

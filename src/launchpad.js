@@ -1,75 +1,189 @@
 import { AnchorProvider, Program, BN } from '@coral-xyz/anchor';
-import { Connection, PublicKey, SystemProgram, Keypair } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
+import {
+  ComputeBudgetProgram,
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} from '@solana/web3.js';
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
+  getAssociatedTokenAddress,
+  NATIVE_MINT,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { CONFIG } from './config.js';
-import idl from './idl/launchpad.json';
+import { getAnchorWallet, getWalletProvider } from './wallet.js';
+import idlJson from './idl/launchpad.json';
 
-const PROGRAM_ID = new PublicKey(CONFIG.LAUNCHPAD.programId);
+export const PROGRAM_ID = new PublicKey(CONFIG.LAUNCHPAD.programId);
+export const METEORA_PROGRAM_ID = new PublicKey('cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG');
 
-function getProvider(wallet) {
-  const connection = new Connection(CONFIG.solanaRpc, 'confirmed');
-  return new AnchorProvider(connection, wallet, { commitment: 'confirmed' });
+const DEFAULT_TOKEN_SUPPLY_RAW = 1_000_000_000_000_000;
+const DEFAULT_BONDING_MIGRATION_TARGET = 100_000_000_000;
+const DEFAULT_PRESALE_END_SECONDS = 24 * 60 * 60;
+const COMPUTE_BUDGET_IXS = [
+  ComputeBudgetProgram.setComputeUnitLimit({ units: 600_000 }),
+  ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 5_000 }),
+];
+
+function normalizeIdl(idl) {
+  const clone = structuredClone(idl);
+  clone.address = CONFIG.LAUNCHPAD.programId;
+  clone.metadata = { ...(clone.metadata || {}), address: CONFIG.LAUNCHPAD.programId };
+  const typesByName = new Map((clone.types || []).map((typeDef) => [typeDef.name, typeDef]));
+  clone.accounts = (clone.accounts || []).map((account) => {
+    if (account.type) return account;
+    const typeDef = typesByName.get(account.name);
+    return typeDef ? { ...account, type: typeDef.type } : account;
+  });
+  return clone;
 }
 
-export function getProgram(wallet) {
-  const provider = getProvider(wallet);
-  return new Program(idl, provider);
+const idl = normalizeIdl(idlJson);
+
+export function getConnection() {
+  return new Connection(CONFIG.solanaRpc, 'confirmed');
+}
+
+export function getProvider(wallet = getAnchorWallet()) {
+  assertWalletMatchesProvider(wallet);
+  return new AnchorProvider(getConnection(), wallet, {
+    commitment: 'confirmed',
+    preflightCommitment: 'confirmed',
+  });
+}
+
+export function getProgram(wallet = getAnchorWallet()) {
+  return new Program(idl, getProvider(wallet));
+}
+
+export function solscanTxUrl(signature) {
+  return `https://solscan.io/tx/${signature}?cluster=devnet`;
+}
+
+export function solscanAccountUrl(address) {
+  return `https://solscan.io/account/${address.toBase58 ? address.toBase58() : address}?cluster=devnet`;
+}
+
+function bn(value) {
+  if (BN.isBN(value)) return value;
+  if (typeof value === 'bigint') return new BN(value.toString());
+  return new BN(String(value));
+}
+
+function pk(value) {
+  return value instanceof PublicKey ? value : new PublicKey(value);
+}
+
+function assertWalletMatchesProvider(wallet) {
+  if (!wallet?.publicKey) throw new Error('Wallet not connected');
+  const provider = getWalletProvider();
+  const providerPk = provider?.publicKey;
+  if (!provider || !providerPk) throw new Error('Wallet not connected');
+  const providerAddress = providerPk.toBase58 ? providerPk.toBase58() : String(providerPk);
+  if (providerAddress !== wallet.publicKey.toBase58()) {
+    throw new Error('Connected wallet changed. Reconnect your wallet and try again.');
+  }
+}
+
+function presaleMode(mode) {
+  if (mode === 1 || String(mode).toLowerCase() === 'extreme') return { extreme: {} };
+  return { regular: {} };
+}
+
+async function ataIx(mint, owner, payer = owner) {
+  const address = await getAssociatedTokenAddress(mint, owner);
+  return {
+    address,
+    instruction: createAssociatedTokenAccountIdempotentInstruction(
+      payer,
+      address,
+      owner,
+      mint,
+    ),
+  };
 }
 
 // ── PDA helpers ──────────────────────────────────────────────────────────
 
 export function getConfigPda() {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('config')],
-    PROGRAM_ID
-  );
-  return pda;
+  return PublicKey.findProgramAddressSync([Buffer.from('config')], PROGRAM_ID)[0];
 }
 
 export function getBondingPoolPda(mint) {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('bonding_pool'), mint.toBuffer()],
-    PROGRAM_ID
-  );
-  return pda;
+  return PublicKey.findProgramAddressSync([Buffer.from('bonding_pool'), pk(mint).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getPresalePoolPda(mint) {
+  return PublicKey.findProgramAddressSync([Buffer.from('presale_pool'), pk(mint).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getPoolPda(mint, mode = 'bonding') {
+  return mode === 'presale' ? getPresalePoolPda(mint) : getBondingPoolPda(mint);
 }
 
 export function getBondingSolVaultPda(mint) {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('bonding_sol_vault'), mint.toBuffer()],
-    PROGRAM_ID
-  );
-  return pda;
+  return PublicKey.findProgramAddressSync([Buffer.from('bonding_sol_vault'), pk(mint).toBuffer()], PROGRAM_ID)[0];
 }
 
 export function getBondingTokenVaultPda(mint) {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('bonding_token_vault'), mint.toBuffer()],
-    PROGRAM_ID
-  );
-  return pda;
+  return PublicKey.findProgramAddressSync([Buffer.from('bonding_token_vault'), pk(mint).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getPresaleSolVaultPda(mint) {
+  return PublicKey.findProgramAddressSync([Buffer.from('presale_sol_vault'), pk(mint).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getPresaleTokenVaultPda(mint) {
+  return PublicKey.findProgramAddressSync([Buffer.from('presale_token_vault'), pk(mint).toBuffer()], PROGRAM_ID)[0];
 }
 
 export function getPositionPda(pool, user) {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('position'), pool.toBuffer(), user.toBuffer()],
-    PROGRAM_ID
-  );
-  return pda;
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('position'), pk(pool).toBuffer(), pk(user).toBuffer()],
+    PROGRAM_ID,
+  )[0];
 }
 
-// ── Bonding curve ────────────────────────────────────────────────────────
+export function getBuybackStatePda(pool) {
+  return PublicKey.findProgramAddressSync([Buffer.from('buyback'), pk(pool).toBuffer()], PROGRAM_ID)[0];
+}
 
-export async function createBondingPool(wallet, mint) {
+export function getBuybackTokenVaultPda(pool) {
+  return PublicKey.findProgramAddressSync([Buffer.from('buyback_token_vault'), pk(pool).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getLpCustodyPda(pool) {
+  return PublicKey.findProgramAddressSync([Buffer.from('lp_custody'), pk(pool).toBuffer()], PROGRAM_ID)[0];
+}
+
+export function getLpFeeVaultPda(pool, feeMint) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('lp_fee_vault'), pk(pool).toBuffer(), pk(feeMint).toBuffer()],
+    PROGRAM_ID,
+  )[0];
+}
+
+export function getMeteoraEventAuthorityPda() {
+  return PublicKey.findProgramAddressSync([Buffer.from('__event_authority')], METEORA_PROGRAM_ID)[0];
+}
+
+// ── Pool creation ────────────────────────────────────────────────────────
+
+export async function createBondingPool(wallet, mint, params = {}) {
   const program = getProgram(wallet);
-  const mintPk = new PublicKey(mint);
+  const mintPk = pk(mint);
 
-  return await program.methods
+  return program.methods
     .createBondingPool({
-      virtualSolReserves: null,
-      virtualTokenReserves: null,
-      tokenSupply: null,
-      migrationTarget: null,
+      virtualSolReserves: params.virtualSolReserves == null ? null : bn(params.virtualSolReserves),
+      virtualTokenReserves: params.virtualTokenReserves == null ? null : bn(params.virtualTokenReserves),
+      tokenSupply: params.tokenSupply == null ? null : bn(params.tokenSupply),
+      migrationTarget: params.migrationTarget == null ? null : bn(params.migrationTarget),
     })
     .accounts({
       creator: wallet.publicKey,
@@ -84,16 +198,51 @@ export async function createBondingPool(wallet, mint) {
     .rpc();
 }
 
-export async function buyTokens(wallet, mint, solAmount, minTokensOut = 0) {
+export async function createPresalePool(wallet, mint, params = {}) {
   const program = getProgram(wallet);
-  const mintPk = new PublicKey(mint);
+  const mintPk = pk(mint);
+  const endTime = params.endTimeUnix ?? Math.floor(Date.now() / 1000) + DEFAULT_PRESALE_END_SECONDS;
+
+  return program.methods
+    .createPresalePool({
+      migrationTarget: bn(params.migrationTarget ?? DEFAULT_BONDING_MIGRATION_TARGET),
+      tokenSupply: bn(params.tokenSupply ?? DEFAULT_TOKEN_SUPPLY_RAW),
+      endTime: bn(endTime),
+      creatorPoolBps: params.creatorPoolBps ?? null,
+      presaleMode: presaleMode(params.presaleMode),
+    })
+    .accounts({
+      creator: wallet.publicKey,
+      config: getConfigPda(),
+      mint: mintPk,
+      pool: getPresalePoolPda(mintPk),
+      solVault: getPresaleSolVaultPda(mintPk),
+      tokenVault: getPresaleTokenVaultPda(mintPk),
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+}
+
+export async function createLaunchpadPool(wallet, mint, { mode = 'bonding', presaleMode: modeArg = 0 } = {}) {
+  if (mode === 'presale') {
+    return createPresalePool(wallet, mint, { presaleMode: modeArg });
+  }
+  return createBondingPool(wallet, mint);
+}
+
+// ── Bonding curve ────────────────────────────────────────────────────────
+
+export async function buyBonding(wallet, mint, solAmount, minTokensOut = 0) {
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
   const poolPda = getBondingPoolPda(mintPk);
-
   const config = await program.account.globalConfig.fetch(getConfigPda());
-  const buyerAta = await getAssociatedTokenAddress(mintPk, wallet.publicKey);
+  const pool = await program.account.bondingCurvePool.fetch(poolPda);
+  const buyerAta = await ataIx(mintPk, wallet.publicKey);
 
-  return await program.methods
-    .buyBonding(new BN(solAmount), new BN(minTokensOut))
+  return program.methods
+    .buyBonding(bn(solAmount), bn(minTokensOut))
     .accounts({
       buyer: wallet.publicKey,
       config: getConfigPda(),
@@ -101,25 +250,26 @@ export async function buyTokens(wallet, mint, solAmount, minTokensOut = 0) {
       buyerPosition: getPositionPda(poolPda, wallet.publicKey),
       solVault: getBondingSolVaultPda(mintPk),
       tokenVault: getBondingTokenVaultPda(mintPk),
-      buyerTokenAccount: buyerAta,
-      devWallet: config.devWallet,
+      buyerTokenAccount: buyerAta.address,
+      creatorWallet: pool.creator,
       platformWallet: config.platformWallet,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
+    .preInstructions([buyerAta.instruction])
     .rpc();
 }
 
-export async function sellTokens(wallet, mint, tokenAmount, minSolOut = 0) {
+export async function sellBonding(wallet, mint, tokenAmount, minSolOut = 0) {
   const program = getProgram(wallet);
-  const mintPk = new PublicKey(mint);
+  const mintPk = pk(mint);
   const poolPda = getBondingPoolPda(mintPk);
-
   const config = await program.account.globalConfig.fetch(getConfigPda());
+  const pool = await program.account.bondingCurvePool.fetch(poolPda);
   const sellerAta = await getAssociatedTokenAddress(mintPk, wallet.publicKey);
 
-  return await program.methods
-    .sellBonding(new BN(tokenAmount), new BN(minSolOut))
+  return program.methods
+    .sellBonding(bn(tokenAmount), bn(minSolOut), config.sellTaxBps)
     .accounts({
       seller: wallet.publicKey,
       config: getConfigPda(),
@@ -127,6 +277,7 @@ export async function sellTokens(wallet, mint, tokenAmount, minSolOut = 0) {
       solVault: getBondingSolVaultPda(mintPk),
       tokenVault: getBondingTokenVaultPda(mintPk),
       sellerTokenAccount: sellerAta,
+      creatorWallet: pool.creator,
       platformWallet: config.platformWallet,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -134,15 +285,238 @@ export async function sellTokens(wallet, mint, tokenAmount, minSolOut = 0) {
     .rpc();
 }
 
+export const buyTokens = buyBonding;
+export const sellTokens = sellBonding;
+
+// ── Presale ───────────────────────────────────────────────────────────────
+
+export async function contributePresale(wallet, mint, solAmount) {
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getPresalePoolPda(mintPk);
+  const config = await program.account.globalConfig.fetch(getConfigPda());
+
+  return program.methods
+    .contributePresale(bn(solAmount))
+    .accounts({
+      contributor: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      solVault: getPresaleSolVaultPda(mintPk),
+      userPosition: getPositionPda(poolPda, wallet.publicKey),
+      platformWallet: config.platformWallet,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+}
+
+export async function claimPresale(wallet, mint) {
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getPresalePoolPda(mintPk);
+  const userAta = await ataIx(mintPk, wallet.publicKey);
+
+  return program.methods
+    .claimPresale()
+    .accounts({
+      user: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      buybackState: getBuybackStatePda(poolPda),
+      userPosition: getPositionPda(poolPda, wallet.publicKey),
+      tokenVault: getPresaleTokenVaultPda(mintPk),
+      userTokenAccount: userAta.address,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions([userAta.instruction])
+    .rpc();
+}
+
+export async function claimCreatorTokens(wallet, mint) {
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getPresalePoolPda(mintPk);
+  const creatorAta = await ataIx(mintPk, wallet.publicKey);
+
+  return program.methods
+    .claimCreatorTokens()
+    .accounts({
+      creator: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      buybackState: getBuybackStatePda(poolPda),
+      tokenVault: getPresaleTokenVaultPda(mintPk),
+      creatorTokenAccount: creatorAta.address,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions([creatorAta.instruction])
+    .rpc();
+}
+
+// ── Migration and fees ───────────────────────────────────────────────────
+
+function requireMeteoraAccounts(accounts = {}) {
+  const required = [
+    'meteoraPool',
+    'meteoraPoolConfig',
+    'meteoraPoolAuthority',
+    'positionNftAccount',
+    'positionAccount',
+    'meteoraVaultA',
+    'meteoraVaultB',
+    'meteoraTokenABadge',
+    'meteoraTokenBBadge',
+    'payerWsolAccount',
+    'payerTokenAccount',
+  ];
+  const missing = required.filter((key) => !accounts[key]);
+  if (missing.length) {
+    throw new Error(`Migration requires Meteora accounts: ${missing.join(', ')}`);
+  }
+}
+
+export async function migrateBonding(wallet, mint, meteoraAccounts = {}) {
+  requireMeteoraAccounts(meteoraAccounts);
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getBondingPoolPda(mintPk);
+  const config = await program.account.globalConfig.fetch(getConfigPda());
+  const positionNftMint = meteoraAccounts.positionNftMintKeypair || Keypair.generate();
+
+  return program.methods
+    .migrateBonding()
+    .accounts({
+      payer: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      solVault: getBondingSolVaultPda(mintPk),
+      tokenVault: getBondingTokenVaultPda(mintPk),
+      buybackState: getBuybackStatePda(poolPda),
+      buybackTokenVault: getBuybackTokenVaultPda(poolPda),
+      platformWallet: config.platformWallet,
+      meteoraProgram: METEORA_PROGRAM_ID,
+      meteoraPool: pk(meteoraAccounts.meteoraPool),
+      meteoraPoolConfig: pk(meteoraAccounts.meteoraPoolConfig),
+      meteoraPoolAuthority: pk(meteoraAccounts.meteoraPoolAuthority),
+      token2022Program: TOKEN_2022_PROGRAM_ID,
+      meteoraEventAuthority: meteoraAccounts.meteoraEventAuthority ? pk(meteoraAccounts.meteoraEventAuthority) : getMeteoraEventAuthorityPda(),
+      lpCustody: getLpCustodyPda(poolPda),
+      positionNftMint: positionNftMint.publicKey,
+      positionNftAccount: pk(meteoraAccounts.positionNftAccount),
+      positionAccount: pk(meteoraAccounts.positionAccount),
+      meteoraVaultA: pk(meteoraAccounts.meteoraVaultA),
+      meteoraVaultB: pk(meteoraAccounts.meteoraVaultB),
+      meteoraTokenABadge: pk(meteoraAccounts.meteoraTokenABadge),
+      meteoraTokenBBadge: pk(meteoraAccounts.meteoraTokenBBadge),
+      wsolMint: NATIVE_MINT,
+      tokenMint: mintPk,
+      payerWsolAccount: pk(meteoraAccounts.payerWsolAccount),
+      payerTokenAccount: pk(meteoraAccounts.payerTokenAccount),
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: SYSVAR_RENT_PUBKEY,
+    })
+    .signers([positionNftMint])
+    .preInstructions(COMPUTE_BUDGET_IXS)
+    .rpc();
+}
+
+export async function migratePresale(wallet, mint, meteoraAccounts = {}) {
+  requireMeteoraAccounts(meteoraAccounts);
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getPresalePoolPda(mintPk);
+  const config = await program.account.globalConfig.fetch(getConfigPda());
+  const pool = await program.account.presalePool.fetch(poolPda);
+  const positionNftMint = meteoraAccounts.positionNftMintKeypair || Keypair.generate();
+
+  return program.methods
+    .migratePresale()
+    .accounts({
+      payer: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      solVault: getPresaleSolVaultPda(mintPk),
+      tokenVault: getPresaleTokenVaultPda(mintPk),
+      buybackState: getBuybackStatePda(poolPda),
+      buybackTokenVault: getBuybackTokenVaultPda(poolPda),
+      platformWallet: config.platformWallet,
+      creatorWallet: pool.creator,
+      meteoraProgram: METEORA_PROGRAM_ID,
+      meteoraPool: pk(meteoraAccounts.meteoraPool),
+      meteoraPoolConfig: pk(meteoraAccounts.meteoraPoolConfig),
+      meteoraPoolAuthority: pk(meteoraAccounts.meteoraPoolAuthority),
+      token2022Program: TOKEN_2022_PROGRAM_ID,
+      meteoraEventAuthority: meteoraAccounts.meteoraEventAuthority ? pk(meteoraAccounts.meteoraEventAuthority) : getMeteoraEventAuthorityPda(),
+      lpCustody: getLpCustodyPda(poolPda),
+      positionNftMint: positionNftMint.publicKey,
+      positionNftAccount: pk(meteoraAccounts.positionNftAccount),
+      positionAccount: pk(meteoraAccounts.positionAccount),
+      meteoraVaultA: pk(meteoraAccounts.meteoraVaultA),
+      meteoraVaultB: pk(meteoraAccounts.meteoraVaultB),
+      meteoraTokenABadge: pk(meteoraAccounts.meteoraTokenABadge),
+      meteoraTokenBBadge: pk(meteoraAccounts.meteoraTokenBBadge),
+      wsolMint: NATIVE_MINT,
+      tokenMint: mintPk,
+      payerWsolAccount: pk(meteoraAccounts.payerWsolAccount),
+      payerTokenAccount: pk(meteoraAccounts.payerTokenAccount),
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: SYSVAR_RENT_PUBKEY,
+    })
+    .signers([positionNftMint])
+    .preInstructions(COMPUTE_BUDGET_IXS)
+    .rpc();
+}
+
+export async function claimLpFees(wallet, pool, feeMint) {
+  const program = getProgram(wallet);
+  const poolPk = pk(pool);
+  const feeMintPk = pk(feeMint);
+  const buybackStatePda = getBuybackStatePda(poolPk);
+  const buybackState = await program.account.buybackState.fetch(buybackStatePda);
+  const config = await program.account.globalConfig.fetch(getConfigPda());
+  const creator = await poolCreator(program, poolPk, buybackState.poolType);
+  const creatorAta = await ataIx(feeMintPk, creator, wallet.publicKey);
+  const protocolAta = await ataIx(feeMintPk, config.platformWallet, wallet.publicKey);
+  const keeperAta = await ataIx(feeMintPk, config.keeperWallet, wallet.publicKey);
+
+  return program.methods
+    .claimLpFees()
+    .accounts({
+      payer: wallet.publicKey,
+      config: getConfigPda(),
+      buybackState: buybackStatePda,
+      lpFeeVault: getLpFeeVaultPda(poolPk, feeMintPk),
+      creatorWallet: creator,
+      protocolWallet: config.platformWallet,
+      pool: poolPk,
+      creatorFeeAccount: creatorAta.address,
+      protocolFeeAccount: protocolAta.address,
+      keeperFeeAccount: keeperAta.address,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions([creatorAta.instruction, protocolAta.instruction, keeperAta.instruction])
+    .rpc();
+}
+
+async function poolCreator(program, pool, poolType) {
+  const fetched = Number(poolType) === 1
+    ? await program.account.presalePool.fetch(pool)
+    : await program.account.bondingCurvePool.fetch(pool);
+  return fetched.creator;
+}
+
 // ── Pool data ────────────────────────────────────────────────────────────
 
-export async function getPoolData(wallet, mint) {
+export async function getPoolData(wallet, mint, mode = 'bonding') {
   const program = getProgram(wallet);
-  const mintPk = new PublicKey(mint);
-  const poolPda = getBondingPoolPda(mintPk);
-
+  const mintPk = pk(mint);
   try {
-    return await program.account.bondingCurvePool.fetch(poolPda);
+    if (mode === 'presale') return await program.account.presalePool.fetch(getPresalePoolPda(mintPk));
+    return await program.account.bondingCurvePool.fetch(getBondingPoolPda(mintPk));
   } catch {
     return null;
   }

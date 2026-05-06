@@ -1,5 +1,5 @@
 {
-  "address": "CtQZ1K5vxoYDZoPgEubC8fM7KnjJuxe2CJyFMgo5wd7X",
+  "address": "DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV",
   "metadata": {
     "name": "launchpad",
     "version": "0.1.0",
@@ -230,7 +230,7 @@
           "writable": true
         },
         {
-          "name": "dev_wallet",
+          "name": "creator_wallet",
           "writable": true
         },
         {
@@ -258,21 +258,39 @@
       ]
     },
     {
-      "name": "claim_presale",
+      "name": "claim_creator_tokens",
       "discriminator": [
-        82,
-        240,
-        122,
-        5,
-        109,
-        66,
-        86,
-        190
+        126,
+        208,
+        113,
+        43,
+        222,
+        70,
+        91,
+        48
       ],
       "accounts": [
         {
-          "name": "user",
+          "name": "creator",
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "pool",
@@ -299,6 +317,290 @@
                 "kind": "account",
                 "path": "pool.mint",
                 "account": "PresalePool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyback_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  98,
+                  97,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  101,
+                  115,
+                  97,
+                  108,
+                  101,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "PresalePool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_lp_fees",
+      "discriminator": [
+        72,
+        86,
+        212,
+        142,
+        60,
+        38,
+        74,
+        75
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyback_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  98,
+                  97,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "lp_fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  102,
+                  101,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              },
+              {
+                "kind": "account",
+                "path": "lp_fee_vault.mint",
+                "account": "TokenAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_wallet"
+        },
+        {
+          "name": "protocol_wallet"
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "creator_fee_account",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_account",
+          "writable": true
+        },
+        {
+          "name": "keeper_fee_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_presale",
+      "discriminator": [
+        82,
+        240,
+        122,
+        5,
+        109,
+        66,
+        86,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  101,
+                  115,
+                  97,
+                  108,
+                  101,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "PresalePool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyback_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  98,
+                  97,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
               }
             ]
           }
@@ -893,10 +1195,28 @@
         {
           "name": "payer",
           "docs": [
-            "Anyone can trigger buyback (permissionless crank)"
+            "Configured keeper wallet only"
           ],
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "buyback_state",
@@ -992,11 +1312,20 @@
           "writable": true
         },
         {
+          "name": "meteora_pool_authority"
+        },
+        {
           "name": "meteora_input_vault",
+          "docs": [
+            "Meteora input vault (SOL/WSOL side)"
+          ],
           "writable": true
         },
         {
           "name": "meteora_output_vault",
+          "docs": [
+            "Meteora output vault (token side)"
+          ],
           "writable": true
         },
         {
@@ -1004,11 +1333,13 @@
         },
         {
           "name": "payer_wsol_account",
+          "docs": [
+            "Payer's WSOL account for swap input"
+          ],
           "writable": true
         },
         {
-          "name": "protocol_fee",
-          "writable": true
+          "name": "meteora_event_authority"
         },
         {
           "name": "token_program",
@@ -1029,6 +1360,253 @@
           }
         }
       ]
+    },
+    {
+      "name": "harvest_and_split_lp_fees",
+      "discriminator": [
+        213,
+        215,
+        28,
+        113,
+        143,
+        32,
+        151,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyback_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  98,
+                  97,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "lp_custody",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  99,
+                  117,
+                  115,
+                  116,
+                  111,
+                  100,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_a_fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  102,
+                  101,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              },
+              {
+                "kind": "account",
+                "path": "token_a_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_b_fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  102,
+                  101,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              },
+              {
+                "kind": "account",
+                "path": "token_b_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_wallet"
+        },
+        {
+          "name": "protocol_wallet"
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "creator_fee_account_a",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_account_a",
+          "writable": true
+        },
+        {
+          "name": "keeper_fee_account_a",
+          "writable": true
+        },
+        {
+          "name": "creator_fee_account_b",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_account_b",
+          "writable": true
+        },
+        {
+          "name": "keeper_fee_account_b",
+          "writable": true
+        },
+        {
+          "name": "meteora_program"
+        },
+        {
+          "name": "meteora_pool"
+        },
+        {
+          "name": "meteora_pool_authority"
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "position_nft_account"
+        },
+        {
+          "name": "meteora_token_a_vault",
+          "writable": true
+        },
+        {
+          "name": "meteora_token_b_vault",
+          "writable": true
+        },
+        {
+          "name": "token_a_mint",
+          "docs": [
+            "WSOL/token A mint."
+          ]
+        },
+        {
+          "name": "token_b_mint",
+          "docs": [
+            "Launch token mint."
+          ]
+        },
+        {
+          "name": "meteora_event_authority"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "initialize",
@@ -1314,20 +1892,55 @@
           "name": "meteora_pool_config"
         },
         {
+          "name": "meteora_pool_authority"
+        },
+        {
+          "name": "token_2022_program"
+        },
+        {
+          "name": "meteora_event_authority"
+        },
+        {
+          "name": "lp_custody",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  99,
+                  117,
+                  115,
+                  116,
+                  111,
+                  100,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "position_nft_mint",
           "writable": true,
           "signer": true
         },
         {
           "name": "position_nft_account",
+          "docs": [
+            "We validate the PDA derivation pre-CPI and parse the Token-2022 account",
+            "state after CPI to confirm mint, token owner, and amount."
+          ],
           "writable": true
         },
         {
           "name": "position_account",
-          "writable": true
-        },
-        {
-          "name": "position_nft_metadata",
           "writable": true
         },
         {
@@ -1337,6 +1950,12 @@
         {
           "name": "meteora_vault_b",
           "writable": true
+        },
+        {
+          "name": "meteora_token_a_badge"
+        },
+        {
+          "name": "meteora_token_b_badge"
         },
         {
           "name": "wsol_mint",
@@ -1352,10 +1971,16 @@
         },
         {
           "name": "payer_wsol_account",
+          "docs": [
+            "Payer's WSOL token account (for SOL deposit)"
+          ],
           "writable": true
         },
         {
           "name": "payer_token_account",
+          "docs": [
+            "Payer's token B account (for token deposit)"
+          ],
           "writable": true
         },
         {
@@ -1393,7 +2018,7 @@
         {
           "name": "payer",
           "docs": [
-            "C-6: Only admin can trigger migration"
+            "Anyone can permissionlessly migrate once the target is reached."
           ],
           "writable": true,
           "signer": true
@@ -1600,7 +2225,7 @@
         {
           "name": "creator_wallet",
           "docs": [
-            "Creator wallet for creator pool allocation"
+            "Creator wallet receives the creator SOL allocation."
           ],
           "writable": true
         },
@@ -1615,20 +2240,55 @@
           "name": "meteora_pool_config"
         },
         {
+          "name": "meteora_pool_authority"
+        },
+        {
+          "name": "token_2022_program"
+        },
+        {
+          "name": "meteora_event_authority"
+        },
+        {
+          "name": "lp_custody",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  99,
+                  117,
+                  115,
+                  116,
+                  111,
+                  100,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
           "name": "position_nft_mint",
           "writable": true,
           "signer": true
         },
         {
           "name": "position_nft_account",
+          "docs": [
+            "We validate the PDA derivation pre-CPI and parse the Token-2022 account",
+            "state after CPI to confirm mint, token owner, and amount."
+          ],
           "writable": true
         },
         {
           "name": "position_account",
-          "writable": true
-        },
-        {
-          "name": "position_nft_metadata",
           "writable": true
         },
         {
@@ -1638,6 +2298,12 @@
         {
           "name": "meteora_vault_b",
           "writable": true
+        },
+        {
+          "name": "meteora_token_a_badge"
+        },
+        {
+          "name": "meteora_token_b_badge"
         },
         {
           "name": "wsol_mint",
@@ -1653,10 +2319,16 @@
         },
         {
           "name": "payer_wsol_account",
+          "docs": [
+            "Payer WSOL account"
+          ],
           "writable": true
         },
         {
           "name": "payer_token_account",
+          "docs": [
+            "Payer token account"
+          ],
           "writable": true
         },
         {
@@ -1710,6 +2382,142 @@
                   105,
                   103
                 ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "pause_bonding_pool",
+      "discriminator": [
+        85,
+        157,
+        84,
+        143,
+        41,
+        129,
+        40,
+        43
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "BondingCurvePool"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "pause_presale_pool",
+      "discriminator": [
+        121,
+        114,
+        144,
+        253,
+        190,
+        217,
+        210,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  101,
+                  115,
+                  97,
+                  108,
+                  101,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "PresalePool"
               }
             ]
           }
@@ -1778,6 +2586,24 @@
           "name": "user",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "pool",
@@ -2035,6 +2861,10 @@
           "writable": true
         },
         {
+          "name": "creator_wallet",
+          "writable": true
+        },
+        {
           "name": "platform_wallet",
           "docs": [
             "Platform wallet receives platform fee"
@@ -2058,8 +2888,136 @@
         {
           "name": "min_sol_out",
           "type": "u64"
+        },
+        {
+          "name": "expected_sell_tax_bps",
+          "type": "u16"
         }
       ]
+    },
+    {
+      "name": "split_claimed_fees",
+      "discriminator": [
+        133,
+        27,
+        242,
+        87,
+        63,
+        146,
+        169,
+        4
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyback_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  121,
+                  98,
+                  97,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "lp_fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  112,
+                  95,
+                  102,
+                  101,
+                  101,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyback_state.pool",
+                "account": "BuybackState"
+              },
+              {
+                "kind": "account",
+                "path": "lp_fee_vault.mint",
+                "account": "TokenAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator_wallet"
+        },
+        {
+          "name": "protocol_wallet"
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "creator_fee_account",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_account",
+          "writable": true
+        },
+        {
+          "name": "keeper_fee_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
     },
     {
       "name": "unpause",
@@ -2093,6 +3051,142 @@
                   105,
                   103
                 ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unpause_bonding_pool",
+      "discriminator": [
+        242,
+        35,
+        63,
+        205,
+        49,
+        116,
+        12,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "BondingCurvePool"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unpause_presale_pool",
+      "discriminator": [
+        223,
+        248,
+        251,
+        64,
+        176,
+        242,
+        235,
+        32
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  101,
+                  115,
+                  97,
+                  108,
+                  101,
+                  95,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "PresalePool"
               }
             ]
           }
@@ -2145,6 +3239,55 @@
               "name": "UpdateConfigParams"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "upgrade_config_v2",
+      "discriminator": [
+        19,
+        182,
+        14,
+        42,
+        207,
+        154,
+        117,
+        88
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "keeper_fee_bps",
+          "type": "u16"
         }
       ]
     }
@@ -2386,133 +3529,203 @@
     },
     {
       "code": 6007,
+      "name": "UnauthorizedKeeper",
+      "msg": "Unauthorized: not keeper wallet"
+    },
+    {
+      "code": 6008,
       "name": "PlatformPaused",
       "msg": "Platform is paused"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "PoolPaused",
       "msg": "Pool is paused"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "AlreadyMigrated",
       "msg": "Pool already migrated"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "NotMigrated",
       "msg": "Pool not migrated yet"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "MigrationTargetNotReached",
       "msg": "Migration target not reached"
     },
     {
-      "code": 6012,
+      "code": 6013,
+      "name": "MigrationTargetReached",
+      "msg": "Migration target already reached"
+    },
+    {
+      "code": 6014,
+      "name": "SellsLockedAtTarget",
+      "msg": "Bonding sells are locked once migration target is reached"
+    },
+    {
+      "code": 6015,
       "name": "PoolNotActive",
       "msg": "Pool is not active"
     },
     {
-      "code": 6013,
+      "code": 6016,
       "name": "ExceedsMaxBuy",
       "msg": "Buy amount exceeds max 1% per wallet"
     },
     {
-      "code": 6014,
+      "code": 6017,
       "name": "InsufficientTokenReserves",
       "msg": "Insufficient token reserves"
     },
     {
-      "code": 6015,
+      "code": 6018,
       "name": "InsufficientSolReserves",
       "msg": "Insufficient SOL reserves"
     },
     {
-      "code": 6016,
+      "code": 6019,
       "name": "SlippageExceeded",
       "msg": "Slippage tolerance exceeded"
     },
     {
-      "code": 6017,
+      "code": 6020,
+      "name": "UnexpectedSellTaxBps",
+      "msg": "Unexpected sell tax basis points"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidMinTokensOut",
+      "msg": "Minimum output must be greater than zero"
+    },
+    {
+      "code": 6022,
       "name": "ZeroAmount",
       "msg": "Amount must be greater than zero"
     },
     {
-      "code": 6018,
+      "code": 6023,
       "name": "PresaleEnded",
       "msg": "Presale has ended"
     },
     {
-      "code": 6019,
+      "code": 6024,
       "name": "PresaleNotEnded",
       "msg": "Presale has not ended yet"
     },
     {
-      "code": 6020,
+      "code": 6025,
       "name": "ExceedsMaxContribution",
       "msg": "Contribution exceeds max 1% per wallet"
     },
     {
-      "code": 6021,
+      "code": 6026,
+      "name": "ContributionExceedsTarget",
+      "msg": "Contribution exceeds remaining presale target"
+    },
+    {
+      "code": 6027,
       "name": "AlreadyClaimed",
       "msg": "Tokens already claimed"
     },
     {
-      "code": 6022,
+      "code": 6028,
       "name": "AlreadyRefunded",
       "msg": "Refund already claimed"
     },
     {
-      "code": 6023,
+      "code": 6029,
       "name": "TargetReached",
       "msg": "Presale target was reached, no refund"
     },
     {
-      "code": 6024,
+      "code": 6030,
       "name": "InvalidMigrationTarget",
       "msg": "Invalid migration target: must be 100-10000 SOL"
     },
     {
-      "code": 6025,
+      "code": 6031,
       "name": "InvalidEndTime",
       "msg": "Invalid end time: must be in the future"
     },
     {
-      "code": 6026,
+      "code": 6032,
       "name": "BuybackTooFrequent",
       "msg": "Buyback rate limit: too frequent"
     },
     {
-      "code": 6027,
+      "code": 6033,
       "name": "InsufficientTreasury",
       "msg": "Insufficient treasury balance for buyback"
     },
     {
-      "code": 6028,
+      "code": 6034,
       "name": "InvalidBuybackMode",
       "msg": "Invalid buyback mode"
     },
     {
-      "code": 6029,
+      "code": 6035,
+      "name": "IdleBuybackTokens",
+      "msg": "Buyback left idle token balance"
+    },
+    {
+      "code": 6036,
       "name": "AllRoundsExecuted",
       "msg": "All scheduled buyback rounds already executed"
     },
     {
-      "code": 6030,
+      "code": 6037,
       "name": "RoundNotDue",
       "msg": "Next buyback round not yet due"
     },
     {
-      "code": 6031,
+      "code": 6038,
       "name": "InvalidFeeConfig",
       "msg": "Invalid fee configuration"
     },
     {
-      "code": 6032,
+      "code": 6039,
       "name": "InvalidPoolParams",
       "msg": "Invalid pool parameters"
+    },
+    {
+      "code": 6040,
+      "name": "InvalidMintSuffix",
+      "msg": "Mint address must end with required launchpad suffix"
+    },
+    {
+      "code": 6041,
+      "name": "MintFreezable",
+      "msg": "Mint freeze authority must be revoked"
+    },
+    {
+      "code": 6042,
+      "name": "UnsafeMintAuthority",
+      "msg": "Mint authority must be revoked or program controlled"
+    },
+    {
+      "code": 6043,
+      "name": "AdminLpCustody",
+      "msg": "LP position cannot be custodied by admin"
+    },
+    {
+      "code": 6044,
+      "name": "InvalidLpPositionCustody",
+      "msg": "LP position NFT custody is invalid"
+    },
+    {
+      "code": 6045,
+      "name": "NothingToClaim",
+      "msg": "Creator token allocation already fully claimed"
+    },
+    {
+      "code": 6046,
+      "name": "CreatorOverclaim",
+      "msg": "Creator claim exceeds allocation"
     }
   ],
   "types": [
@@ -2681,9 +3894,6 @@
         "variants": [
           {
             "name": "Burn"
-          },
-          {
-            "name": "AddLiquidity"
           }
         ]
       }
@@ -2711,6 +3921,20 @@
             "name": "meteora_pool",
             "docs": [
               "Meteora DAMM pool created during migration — validated on every buyback"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "lp_custody",
+            "docs": [
+              "Program PDA that owns/custodies the LP position."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "position_nft_mint",
+            "docs": [
+              "Meteora position NFT mint for the principal LP position."
             ],
             "type": "pubkey"
           },
@@ -2767,9 +3991,58 @@
             "type": "u64"
           },
           {
-            "name": "total_tokens_lp",
+            "name": "idle_tokens",
             "docs": [
-              "Total tokens added as liquidity"
+              "Explicit idle token accounting. Must remain zero for burn-only buybacks."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee_bps",
+            "docs": [
+              "Creator share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_fee_bps",
+            "docs": [
+              "Keeper reward share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_token_allocation",
+            "docs": [
+              "Creator token allocation claimable from the presale vault."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_tokens_claimed",
+            "docs": [
+              "Creator tokens already claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lp_fees_claimed_a",
+            "docs": [
+              "Total token-A LP fees distributed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lp_fees_claimed_b",
+            "docs": [
+              "Total token-B LP fees distributed."
             ],
             "type": "u64"
           },
@@ -2927,7 +4200,7 @@
           {
             "name": "mode",
             "docs": [
-              "Buyback mode: Burn or AddLiquidity"
+              "Buyback mode: burn-only. Any other mode is invalid at decode time."
             ],
             "type": {
               "defined": {
@@ -3014,6 +4287,34 @@
             "type": "u16"
           },
           {
+            "name": "creator_fee_bps",
+            "docs": [
+              "Creator share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_fee_bps",
+            "docs": [
+              "Keeper reward share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_wallet",
+            "docs": [
+              "Fixed protocol keeper wallet for LP fee harvesting and rewards"
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "pending_admin",
             "docs": [
               "Pending admin for two-step transfer (Pubkey::default() = none)"
@@ -3033,6 +4334,18 @@
               "PDA bump"
             ],
             "type": "u8"
+          },
+          {
+            "name": "allowed_meteora_configs",
+            "docs": [
+              "Allowed Meteora pool configs for migrations."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
           }
         ]
       }
@@ -3072,6 +4385,18 @@
           },
           {
             "name": "migration_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "creator_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "keeper_fee_bps",
             "type": "u16"
           }
         ]
@@ -3325,6 +4650,13 @@
             "type": "bool"
           },
           {
+            "name": "is_paused",
+            "docs": [
+              "Pool-level pause"
+            ],
+            "type": "bool"
+          },
+          {
             "name": "bump",
             "docs": [
               "PDA bump"
@@ -3344,6 +4676,13 @@
               "Token vault bump"
             ],
             "type": "u8"
+          },
+          {
+            "name": "claimed_contributors",
+            "docs": [
+              "Number of contributor claims already processed."
+            ],
+            "type": "u32"
           }
         ]
       }
@@ -3394,7 +4733,7 @@
             "type": "u64"
           },
           {
-            "name": "dev_fee",
+            "name": "creator_fee",
             "type": "u64"
           },
           {
@@ -3431,6 +4770,10 @@
           },
           {
             "name": "sol_amount",
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee",
             "type": "u64"
           },
           {
@@ -3504,6 +4847,35 @@
             "type": {
               "option": "u16"
             }
+          },
+          {
+            "name": "new_creator_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_protocol_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_keeper_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_allowed_meteora_configs",
+            "type": {
+              "option": {
+                "array": [
+                  "pubkey",
+                  4
+                ]
+              }
+            }
           }
         ]
       }
@@ -3528,9 +4900,11 @@
             "type": "pubkey"
           },
           {
-            "name": "sol_contributed",
+            "name": "amount",
             "docs": [
-              "Total SOL contributed (lamports)"
+              "Position amount.",
+              "Bonding pools use this as cumulative tokens bought.",
+              "Presale pools use this as cumulative SOL contributed."
             ],
             "type": "u64"
           },
