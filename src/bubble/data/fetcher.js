@@ -56,9 +56,9 @@ function mockBubbleData(mint) {
   return { mint, totalSupply, holders, edges, labels, fetchedAt: Date.now() };
 }
 
-const HELIUS_KEY = '640a1aca-ce83-419f-9c67-5812da25c21d';
-const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
+import { CONFIG } from '../../config.js';
 
+const RPC_URL = CONFIG.solanaRpc;
 const CACHE_DB_NAME    = 'carpet_bubble_cache';
 const CACHE_STORE_NAME = 'bubbles';
 const CACHE_TTL_MS     = 5 * 60 * 1000;
@@ -114,7 +114,7 @@ export async function cacheInvalidate(mint) {
 // ── RPC primitives ──────────────────────────────────────────────────────────
 
 async function rpc(method, params) {
-  const res = await fetch(HELIUS_RPC, {
+  const res = await fetch(RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
@@ -130,7 +130,7 @@ async function rpcBatch(calls) {
   const body = calls.map((c, i) => ({
     jsonrpc: '2.0', id: i, method: c.method, params: c.params,
   }));
-  const res = await fetch(HELIUS_RPC, {
+  const res = await fetch(RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
