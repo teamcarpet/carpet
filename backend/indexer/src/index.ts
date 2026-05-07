@@ -20,7 +20,16 @@ import { startAggregator }  from './aggregator.js';
 const env = loadEnv(z.object({
   GEYSER_ENDPOINT:  z.string().url(),
   GEYSER_X_TOKEN:   z.string().min(1),
-  MOCK_MODE:        z.coerce.boolean().default(true),
+  // NOTE: do NOT use z.coerce.boolean() — it treats any non-empty string as
+  // truthy, so "false" becomes true. Parse the string ourselves.
+  MOCK_MODE: z.preprocess(
+    v => {
+      if (typeof v === 'boolean') return v;
+      if (typeof v !== 'string') return false;
+      return ['true', '1', 'yes', 'on'].includes(v.trim().toLowerCase());
+    },
+    z.boolean(),
+  ).default(false),
   MOCK_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
 }));
 
@@ -66,7 +75,6 @@ if (env.MOCK_MODE) {
     endpoint:  env.GEYSER_ENDPOINT,
     xToken:    env.GEYSER_X_TOKEN,
     programId: env.PROGRAM_ID,
-    rpcUrl:    env.SOLANA_RPC_URL,
   });
 }
 
