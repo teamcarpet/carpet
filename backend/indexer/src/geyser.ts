@@ -14,7 +14,12 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import type Redis from 'ioredis';
-import Client, { CommitmentLevel, SubscribeRequest } from '@triton-one/yellowstone-grpc';
+import grpcModule, { CommitmentLevel, SubscribeRequest } from '@triton-one/yellowstone-grpc';
+// CommonJS interop: in some ESM runtimes (Node 20 + esModuleInterop), the
+// default export of @triton-one/yellowstone-grpc lands as { default: Client }
+// instead of Client itself. Fall through to .default if present.
+const Client: any = ((grpcModule as any)?.default ?? grpcModule);
+
 import { logger } from '@carpet/shared';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { initDecoder, decodeEvents, loadIdl } from './decoder.js';
@@ -78,7 +83,7 @@ export async function startGeyser(opts: GeyserOpts): Promise<void> {
     return;
   }
 
-  stream.on('data', (msg) => {
+  stream.on('data', (msg: any) => {
     if (msg.transaction) {
       const tx = msg.transaction.transaction;
       const signature = extractSignature(tx);
