@@ -2,7 +2,7 @@ import {
   connectWallet, disconnectWallet, isConnected,
   getPublicKey, getBalance, getShortAddress,
   copyAddress, refreshBalance, onWalletChange,
-  getAnchorWallet,
+  getAnchorWallet, getSupportedWallets,
 } from './wallet.js';
 import {
   buyBonding,
@@ -21,7 +21,7 @@ import {
 import { uploadFileToPinata, uploadTokenMetadata } from './ipfs.js';
 import {
   getTokens, getToken, addToken, updateToken, deleteToken,
-  getTickerTokens, mergeIndexedTokens,
+  getTickerTokens,
 } from './platform.js';
 import { CONFIG } from './config.js';
 import {
@@ -197,7 +197,6 @@ export function openDet(id) {
           showTxN('Sell confirmed', sig);
         }
         await refreshBalance();
-        await refreshIndexedTokens();
       } catch (err) {
         showN('Trade failed: ' + err.message);
       }
@@ -321,21 +320,6 @@ export function filterSearch(q) { searchQ = q.toLowerCase(); renderAll(); }
 
 window.addEventListener('platform:token-added', renderAll);
 window.addEventListener('platform:token-updated', renderAll);
-window.addEventListener('platform:tokens-synced', renderAll);
-
-async function refreshIndexedTokens() {
-  try {
-    const res = await fetch(`${CONFIG.apiServerUrl}/tokens?col=all&limit=100`);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (Array.isArray(data?.tokens)) {
-      mergeIndexedTokens(data.tokens);
-      refreshTicker();
-    }
-  } catch {
-    // Keep optimistic local launch state visible when the indexer/API is offline.
-  }
-}
 
 
 // ── Edit Token ────────────────────────────────────────────────────────────────
@@ -519,7 +503,6 @@ export async function doLaunch() {
     document.getElementById('suc-sig').href = solscanTxUrl(result.poolSig || result.sig);
     showTxN('Launchpad pool created', result.poolSig || result.sig);
     renderAll(); refreshTicker();
-    setTimeout(refreshIndexedTokens, 2500);
   } catch (err) {
     showN('Launch failed: ' + err.message); console.error(err);
     if (btn) { btn.disabled = false; btn.textContent = 'Launch'; }
@@ -639,8 +622,6 @@ export function pfTab(el, tab) {
 export function init() {
   renderAll();
   refreshTicker();
-  refreshIndexedTokens();
-  setInterval(refreshIndexedTokens, 15_000);
   requestAnimationFrame(() => setTimeout(updCrs, 100));
 
   document.addEventListener('click', e => {
@@ -674,13 +655,20 @@ export function init() {
 
    initProfile(); 
    
-  // Auto-reconnect if previously connected
-  const provider = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
-  if (provider) {
-    provider.connect({ onlyIfTrusted: true })
-      .then(() => {})
-      .catch(() => {});
-  }
+  // Auto-reconnect: if user previously connected, restore the SAME wallet silently.
+  // Phantom/Solflare/Backpack inject providers asynchronously, so retry briefly
+  // until at least one is on window.
+  (async () => {
+    const lastWallet = (() => { try { return localStorage.getItem('carpet:lastWallet'); } catch { return null; } })();
+    if (!lastWallet) return;
+    for (let i = 0; i < 20; i++) {
+      if (getSupportedWallets().length) break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    try {
+      await connectWallet(lastWallet, { onlyIfTrusted: true, silent: true });
+    } catch {}
+  })();
 }
 
 // Expose all public functions to window for inline HTML handlers — at module top-level

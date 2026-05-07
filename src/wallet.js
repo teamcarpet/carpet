@@ -55,34 +55,62 @@ export function onWalletChange(cb) {
 
 function emit() { _listeners.forEach(fn => fn({ pubkey: _pubkey, balance: _balance, walletName: _walletName })); }
 
-export async function connectWallet(preferredName = null) {
-  const selected = getProvider(preferredName);
+export async function connectWallet(preferredName = null, opts = {}) {
+  const { onlyIfTrusted = false, silent = false } = opts;
+  const lastUsed = preferredName || (typeof localStorage !== 'undefined' ? localStorage.getItem('carpet:lastWallet') : null);
+  const selected = getProvider(lastUsed);
   if (!selected) {
+    if (silent || onlyIfTrusted) return null;
     window.open('https://phantom.app/', '_blank');
     throw new Error('Install Phantom, Solflare, or Backpack to connect');
   }
   const { name, provider } = selected;
   _provider = provider;
   _walletName = name;
-  const resp = await provider.connect();
-  _pubkey = resp?.publicKey || provider.publicKey;
-  if (!_pubkey) throw new Error(`${name} did not return a public key`);
-  _pubkey = new PublicKey(_pubkey.toBase58 ? _pubkey.toBase58() : _pubkey);
-  await refreshBalance();
 
-  provider.on('disconnect', () => {
-    _pubkey = null;
-    _balance = 0;
+  let resp;
+  try {
+    resp = await (onlyIfTrusted ? provider.connect({ onlyIfTrusted: true }) : provider.connect());
+  } catch (err) {
+    // onlyIfTrusted throws when the user previously revoked or never connected — that's ok, stay disconnected.
     _provider = null;
     _walletName = null;
-    emit();
-  });
-  provider.on('accountChanged', async (pk) => {
-    _pubkey = pk ? new PublicKey(pk.toBase58 ? pk.toBase58() : pk) : null;
-    if (_pubkey) await refreshBalance();
-    else _balance = 0;
-    emit();
-  });
+    if (onlyIfTrusted || silent) return null;
+    throw err;
+  }
+
+  _pubkey = resp?.publicKey || provider.publicKey;
+  if (!_pubkey) {
+    _provider = null;
+    _walletName = null;
+    if (onlyIfTrusted || silent) return null;
+    throw new Error(`${name} did not return a public key`);
+  }
+  _pubkey = new PublicKey(_pubkey.toBase58 ? _pubkey.toBase58() : _pubkey);
+
+  // Persist choice so we can auto-reconnect to the SAME wallet next session.
+  try { localStorage.setItem('carpet:lastWallet', name); } catch {}
+
+  await refreshBalance();
+
+  // Avoid stacking listeners on repeated connects (e.g. user clicks Connect twice).
+  if (!provider.__carpetListenersAttached) {
+    provider.on('disconnect', () => {
+      _pubkey = null;
+      _balance = 0;
+      _provider = null;
+      _walletName = null;
+      try { localStorage.removeItem('carpet:lastWallet'); } catch {}
+      emit();
+    });
+    provider.on('accountChanged', async (pk) => {
+      _pubkey = pk ? new PublicKey(pk.toBase58 ? pk.toBase58() : pk) : null;
+      if (_pubkey) await refreshBalance();
+      else _balance = 0;
+      emit();
+    });
+    provider.__carpetListenersAttached = true;
+  }
 
   emit();
   return { pubkey: _pubkey, balance: _balance };
@@ -94,6 +122,7 @@ export async function disconnectWallet() {
   _balance = 0;
   _provider = null;
   _walletName = null;
+  try { localStorage.removeItem('carpet:lastWallet'); } catch {}
   emit();
 }
 
