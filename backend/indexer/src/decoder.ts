@@ -13,8 +13,11 @@
 // Phase 1 ships this as a stub — geyser.ts logs raw signatures only.
 // ─────────────────────────────────────────────────────────────────────────
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { BorshCoder, EventParser, type Idl } from '@coral-xyz/anchor';
 import { logger } from '@carpet/shared';
+import { PublicKey } from '@solana/web3.js';
 
 let coder:  BorshCoder | null = null;
 let parser: EventParser | null = null;
@@ -25,20 +28,44 @@ let parser: EventParser | null = null;
  */
 export async function initDecoder(programId: string): Promise<boolean> {
   try {
-    // We import dynamically so the indexer can boot without the IDL
-    // (mock mode doesn't need it).
-    const idlPath = process.env.IDL_PATH ?? './idl/launchpad.json';
-    const mod = await import(idlPath, { assert: { type: 'json' } }) as { default: Idl };
-    const idl = mod.default;
+    const idl = loadIdl();
 
     coder  = new BorshCoder(idl);
-    parser = new EventParser({ programId } as never, coder);
+    parser = new EventParser(new PublicKey(programId), coder);
     logger.info({ programId }, 'Anchor event decoder initialised');
     return true;
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'IDL not available — decoder disabled');
     return false;
   }
+}
+
+export function loadIdl(): Idl {
+  const candidates = [
+    process.env.IDL_PATH,
+    path.resolve(process.cwd(), 'idl/launchpad.json'),
+    path.resolve(process.cwd(), '../../contracts/target/idl/launchpad.json'),
+    path.resolve(process.cwd(), 'contracts/target/idl/launchpad.json'),
+    path.resolve(import.meta.dirname, '../../../contracts/target/idl/launchpad.json'),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    const idl = JSON.parse(fs.readFileSync(candidate, 'utf8')) as Idl;
+    return normalizeIdl(idl);
+  }
+
+  throw new Error(`launchpad IDL not found. Set IDL_PATH or build contracts/target/idl/launchpad.json`);
+}
+
+function normalizeIdl(idl: Idl): Idl {
+  const next = JSON.parse(JSON.stringify(idl)) as any;
+  if (Array.isArray(next.accounts)) {
+    next.accounts = next.accounts.map((account: any) => (
+      account.type ? account : { ...account, type: next.types?.find((type: any) => type.name === account.name)?.type }
+    ));
+  }
+  return next as Idl;
 }
 
 /**

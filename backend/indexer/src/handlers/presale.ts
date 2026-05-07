@@ -16,6 +16,7 @@ export interface ContributionEvent {
   mint:        string;
   contributor: string;
   amountSol:   number;
+  totalRaisedSol?: number;
   round:       number;
   timestamp:   number;
 }
@@ -27,6 +28,13 @@ export async function handlePresaleContribution(evt: ContributionEvent, _redis: 
     ON CONFLICT (pool) DO UPDATE SET
       total_raised_sol = presale_state.total_raised_sol + ${evt.amountSol},
       current_round    = ${evt.round}
+  `;
+  await sql`
+    UPDATE pool_state
+    SET total_raised_sol = ${evt.totalRaisedSol ?? evt.amountSol},
+        progress_pct = LEAST(100, (${evt.totalRaisedSol ?? evt.amountSol} / NULLIF(migration_target, 0)) * 100),
+        last_updated = NOW()
+    WHERE pool = ${evt.pool}
   `;
   logger.debug({ amount: evt.amountSol, round: evt.round }, 'presale contribution');
 }

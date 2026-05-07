@@ -21,7 +21,7 @@ import {
 import { uploadFileToPinata, uploadTokenMetadata } from './ipfs.js';
 import {
   getTokens, getToken, addToken, updateToken, deleteToken,
-  getTickerTokens,
+  getTickerTokens, mergeIndexedTokens,
 } from './platform.js';
 import { CONFIG } from './config.js';
 import {
@@ -197,6 +197,7 @@ export function openDet(id) {
           showTxN('Sell confirmed', sig);
         }
         await refreshBalance();
+        await refreshIndexedTokens();
       } catch (err) {
         showN('Trade failed: ' + err.message);
       }
@@ -320,6 +321,21 @@ export function filterSearch(q) { searchQ = q.toLowerCase(); renderAll(); }
 
 window.addEventListener('platform:token-added', renderAll);
 window.addEventListener('platform:token-updated', renderAll);
+window.addEventListener('platform:tokens-synced', renderAll);
+
+async function refreshIndexedTokens() {
+  try {
+    const res = await fetch(`${CONFIG.apiServerUrl}/tokens?col=all&limit=100`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data?.tokens)) {
+      mergeIndexedTokens(data.tokens);
+      refreshTicker();
+    }
+  } catch {
+    // Keep optimistic local launch state visible when the indexer/API is offline.
+  }
+}
 
 
 // ── Edit Token ────────────────────────────────────────────────────────────────
@@ -503,6 +519,7 @@ export async function doLaunch() {
     document.getElementById('suc-sig').href = solscanTxUrl(result.poolSig || result.sig);
     showTxN('Launchpad pool created', result.poolSig || result.sig);
     renderAll(); refreshTicker();
+    setTimeout(refreshIndexedTokens, 2500);
   } catch (err) {
     showN('Launch failed: ' + err.message); console.error(err);
     if (btn) { btn.disabled = false; btn.textContent = 'Launch'; }
@@ -622,6 +639,8 @@ export function pfTab(el, tab) {
 export function init() {
   renderAll();
   refreshTicker();
+  refreshIndexedTokens();
+  setInterval(refreshIndexedTokens, 15_000);
   requestAnimationFrame(() => setTimeout(updCrs, 100));
 
   document.addEventListener('click', e => {

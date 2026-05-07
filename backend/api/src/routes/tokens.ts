@@ -40,9 +40,9 @@ export const tokensRoutes: FastifyPluginAsync = async (app) => {
     const rows = await sql`
       SELECT
         t.mint, t.ticker, t.name, t.image_url AS "imageUrl",
-        t.creator, t.pool_type AS "poolType",
+        t.creator, t.pool_type AS "poolType", t.pool_address AS "poolAddress",
         extract(epoch FROM t.created_at)::int AS "createdAt",
-        t.is_migrated AS "isMigrated",
+        t.is_migrated AS "isMigrated", t.meteora_pool AS "meteoraPool", t.ath,
         coalesce(ps.price_sol,    0)  AS "priceSol",
         coalesce(ps.market_cap,   0)  AS "marketCap",
         coalesce(ps.progress_pct, 0)  AS prog,

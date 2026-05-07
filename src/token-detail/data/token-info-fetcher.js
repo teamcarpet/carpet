@@ -41,7 +41,7 @@ export async function fetchTokenInfo(mint) {
 
   // Merge with indexer data if available.
   try {
-    const res = await fetch(`${API_ROOT}/token?mint=${mint}`);
+    const res = await fetch(`${CONFIG.apiServerUrl}/token?mint=${mint}`);
     if (res.ok) {
       const data = await res.json();
       return normalizeTokenInfo(base, data);
