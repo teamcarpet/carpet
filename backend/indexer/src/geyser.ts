@@ -20,6 +20,10 @@ import { handleTrade } from './handlers/tokens-bought.js';
 import { handleMigrationCompleted, handleMigrationReady } from './handlers/migration.js';
 import { handlePresaleContribution, handlePresaleClaim, handlePresaleRefund } from './handlers/presale.js';
 import * as anchor from '@coral-xyz/anchor';
+// BN is re-exported by anchor but in ESM `anchor.BN` lands undefined for
+// some build configurations. Import it directly from bn.js (the same package
+// anchor uses internally) to be safe.
+import BN from 'bn.js';
 
 interface GeyserOpts {
   redis:     Redis;
@@ -150,9 +154,19 @@ function pubkey(v: unknown): string {
 }
 
 function num(v: unknown): number {
-  if (anchor.BN.isBN(v)) return Number((v as anchor.BN).toString());
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
   if (typeof v === 'bigint') return Number(v);
-  return Number(v || 0);
+  if (BN.isBN(v)) return Number((v as BN).toString());
+  // Fallback for BN-shaped objects coming from a different bn.js instance
+  // (e.g. duplicated in node_modules) — isBN() returns false across module
+  // boundaries even when the value is morally a BN.
+  if (typeof v === 'object' && typeof (v as any).toString === 'function') {
+    const s = (v as any).toString();
+    const n = Number(s);
+    if (!Number.isNaN(n)) return n;
+  }
+  return Number(v);
 }
 
 function sol(lamports: unknown): number {
