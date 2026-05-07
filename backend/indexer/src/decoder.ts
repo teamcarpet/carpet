@@ -18,8 +18,9 @@ import { logger } from '@carpet/shared';
 import { readFileSync } from 'node:fs';
 import { resolve, isAbsolute } from 'node:path';
 
-let coder:  BorshCoder | null = null;
-let parser: EventParser | null = null;
+let coder:     BorshCoder | null = null;
+let parser:    EventParser | null = null;
+let loadedIdl: Idl | null = null;
 
 /**
  * Lazy-initialise the decoder. Called once on first use.
@@ -39,14 +40,26 @@ export async function initDecoder(programId: string): Promise<boolean> {
     const idlPath = isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
     const idl = JSON.parse(readFileSync(idlPath, 'utf-8')) as Idl;
 
-    coder  = new BorshCoder(idl);
-    parser = new EventParser({ programId } as never, coder);
+    coder     = new BorshCoder(idl);
+    parser    = new EventParser({ programId } as never, coder);
+    loadedIdl = idl;
     logger.info({ programId, idlPath }, 'Anchor event decoder initialised');
     return true;
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'IDL not available — decoder disabled');
     return false;
   }
+}
+
+/**
+ * Returns the IDL loaded by initDecoder. Throws if initDecoder hasn't run
+ * (or failed). Callers should only invoke this after a successful initDecoder.
+ */
+export function loadIdl(): Idl {
+  if (!loadedIdl) {
+    throw new Error('IDL not loaded — call initDecoder() first and check that it returned true');
+  }
+  return loadedIdl;
 }
 
 /**
