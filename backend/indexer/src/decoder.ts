@@ -13,11 +13,10 @@
 // Phase 1 ships this as a stub — geyser.ts logs raw signatures only.
 // ─────────────────────────────────────────────────────────────────────────
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { BorshCoder, EventParser, type Idl } from '@coral-xyz/anchor';
 import { logger } from '@carpet/shared';
-import { PublicKey } from '@solana/web3.js';
+import { readFileSync } from 'node:fs';
+import { resolve, isAbsolute } from 'node:path';
 
 let coder:  BorshCoder | null = null;
 let parser: EventParser | null = null;
@@ -25,47 +24,29 @@ let parser: EventParser | null = null;
 /**
  * Lazy-initialise the decoder. Called once on first use.
  * The IDL file must be available at runtime — bundled or volume-mounted.
+ *
+ * Resolution order for the IDL path:
+ *   1. process.env.IDL_PATH (absolute or relative to cwd)
+ *   2. ./idl/launchpad.json relative to cwd
+ *
+ * We use fs.readFileSync rather than dynamic import() because in ESM
+ * `import('./idl/...')` resolves relative to the CALLING MODULE'S file,
+ * which after compilation lives in dist/, not the project root.
  */
 export async function initDecoder(programId: string): Promise<boolean> {
   try {
-    const idl = loadIdl();
+    const raw = process.env.IDL_PATH ?? 'idl/launchpad.json';
+    const idlPath = isAbsolute(raw) ? raw : resolve(process.cwd(), raw);
+    const idl = JSON.parse(readFileSync(idlPath, 'utf-8')) as Idl;
 
     coder  = new BorshCoder(idl);
-    parser = new EventParser(new PublicKey(programId), coder);
-    logger.info({ programId }, 'Anchor event decoder initialised');
+    parser = new EventParser({ programId } as never, coder);
+    logger.info({ programId, idlPath }, 'Anchor event decoder initialised');
     return true;
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'IDL not available — decoder disabled');
     return false;
   }
-}
-
-export function loadIdl(): Idl {
-  const candidates = [
-    process.env.IDL_PATH,
-    path.resolve(process.cwd(), 'idl/launchpad.json'),
-    path.resolve(process.cwd(), '../../contracts/target/idl/launchpad.json'),
-    path.resolve(process.cwd(), 'contracts/target/idl/launchpad.json'),
-    path.resolve(import.meta.dirname, '../../../contracts/target/idl/launchpad.json'),
-  ].filter(Boolean) as string[];
-
-  for (const candidate of candidates) {
-    if (!fs.existsSync(candidate)) continue;
-    const idl = JSON.parse(fs.readFileSync(candidate, 'utf8')) as Idl;
-    return normalizeIdl(idl);
-  }
-
-  throw new Error(`launchpad IDL not found. Set IDL_PATH or build contracts/target/idl/launchpad.json`);
-}
-
-function normalizeIdl(idl: Idl): Idl {
-  const next = JSON.parse(JSON.stringify(idl)) as any;
-  if (Array.isArray(next.accounts)) {
-    next.accounts = next.accounts.map((account: any) => (
-      account.type ? account : { ...account, type: next.types?.find((type: any) => type.name === account.name)?.type }
-    ));
-  }
-  return next as Idl;
 }
 
 /**

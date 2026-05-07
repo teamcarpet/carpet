@@ -25,5 +25,6 @@ COPY --from=build /app/shared/dist                ./shared/dist
 COPY --from=build /app/shared/package.json        ./shared/package.json
 COPY --from=build /app/indexer/dist               ./indexer/dist
 COPY --from=build /app/indexer/package.json       ./indexer/package.json
+COPY --from=build /app/indexer/idl                ./indexer/idl
 WORKDIR /app/indexer
 CMD ["node", "dist/index.js"]
