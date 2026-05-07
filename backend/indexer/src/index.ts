@@ -66,6 +66,7 @@ if (env.MOCK_MODE) {
     endpoint:  env.GEYSER_ENDPOINT,
     xToken:    env.GEYSER_X_TOKEN,
     programId: env.PROGRAM_ID,
+    rpcUrl:    env.SOLANA_RPC_URL,
   });
 }
 

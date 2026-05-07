@@ -48,6 +48,11 @@ export class ChartEmbed {
     this._loadAndSubscribe();
   }
 
+  setInfo(info) {
+    this.creator = info?.creator || null;
+    this._loadDevMarkers();
+  }
+
   destroy() {
     unsubscribeCandles(this.subUID);
     if (this._resizeObs) this._resizeObs.disconnect();
@@ -218,16 +223,14 @@ export class ChartEmbed {
     }
   }
 
-  // ── Dev (creator) trade markers ─────────────────────────────────────────
 // ── Dev (creator) trade markers ─────────────────────────────────────────
   async _loadDevMarkers() {
     if (!this.candleSeries) return;
 
     try {
+      if (!this.creator) return;
       const trades = await fetchTrades({ mint: this.mint, limit: 500 });
-      // TEMP: pretend MockWallet02 is the creator (revert before commit)
-      const fakeCreator = 'MockWallet02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-      const devTrades = trades.filter(t => t.account === fakeCreator);
+      const devTrades = trades.filter(t => t.account === this.creator);
       if (!devTrades.length) return;
 
       // Group by candle bucket (resolution-aware) and side, so we don't

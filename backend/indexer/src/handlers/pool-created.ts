@@ -39,7 +39,9 @@ export async function handlePoolCreated(evt: PoolCreatedEvent, redis: Redis): Pr
   await sql`
     INSERT INTO pool_state (pool, mint, migration_target)
     VALUES (${evt.pool}, ${evt.mint}, ${evt.migrationTarget})
-    ON CONFLICT (pool) DO NOTHING
+    ON CONFLICT (pool) DO UPDATE SET
+      migration_target = EXCLUDED.migration_target,
+      last_updated = NOW()
   `;
 
   await publish(redis, CHANNELS.POOL_CREATED, evt);

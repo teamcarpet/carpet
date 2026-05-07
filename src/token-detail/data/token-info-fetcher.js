@@ -15,16 +15,18 @@
 //     // price_usd, price_sol, supply, decimals, ...
 //   }
 
+<<<<<<< HEAD
 import { getToken } from '../../platform.js';
 import { CONFIG } from '../../config.js';
 
 const API_ROOT = CONFIG.apiUrl;
+=======
+import { CONFIG } from '../../config.js';
+
+>>>>>>> 31c2a18 (Fix indexer runtime sync and frontend token metrics)
 export async function fetchTokenInfo(mint) {
   // Start from local store — always available.
-  const local = getToken?.(null);   // defensive: only exists if platform.js is loaded
-  const fromStore = typeof getToken === 'function'
-    ? (allTokens() || []).find(t => t.mint === mint) || {}
-    : {};
+  const fromStore = (allTokens() || []).find(t => t.mint === mint) || {};
 
   const base = {
     mint,
@@ -44,14 +46,34 @@ export async function fetchTokenInfo(mint) {
 
   // Merge with indexer data if available.
   try {
-    const res = await fetch(`${API_ROOT}/token?mint=${mint}`);
+    const res = await fetch(`${CONFIG.apiServerUrl}/token?mint=${mint}`);
     if (res.ok) {
       const data = await res.json();
-      return { ...base, ...data };
+      return normalizeTokenInfo(base, data);
     }
   } catch { /* backend offline — local only */ }
 
   return base;
+}
+
+function normalizeTokenInfo(base, data) {
+  const prog = Number(data.prog ?? data.progressPct ?? base.prog ?? 0);
+  const isMigrated = Boolean(data.isMigrated ?? base.isMigrated);
+  return {
+    ...base,
+    ...data,
+    tk: data.ticker ?? base.tk,
+    n: data.name ?? base.n,
+    mc: Number(data.marketCap ?? base.mc ?? 0),
+    ath: Number(data.ath ?? base.ath ?? 0),
+    pct: Number(data.pctChange24h ?? base.pct ?? 0),
+    vol: Number(data.volume24h ?? base.vol ?? 0),
+    h: Number(data.holders ?? base.h ?? 0),
+    prog,
+    mode: data.poolType ?? base.mode,
+    isMigrated,
+    col: isMigrated ? 'migrated' : prog >= 50 ? 'bonding' : (base.col || 'new'),
+  };
 }
 
 // Helper — platform.js exposes getTokens via module import.

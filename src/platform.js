@@ -47,6 +47,60 @@ export function updateToken(id, updates) {
   return tokens[idx];
 }
 
+export function mergeIndexedTokens(indexedTokens = []) {
+  if (!Array.isArray(indexedTokens) || !indexedTokens.length) return [];
+  const tokens = getTokens();
+  let changed = false;
+  const byMint = new Map(tokens.filter(t => t.mint).map(t => [t.mint, t]));
+
+  for (const indexed of indexedTokens) {
+    if (!indexed?.mint) continue;
+    const existing = byMint.get(indexed.mint);
+    const merged = normalizeIndexedToken(existing, indexed);
+    if (existing) {
+      const idx = tokens.findIndex(t => t.mint === indexed.mint);
+      tokens[idx] = { ...existing, ...merged };
+    } else {
+      tokens.push({
+        id: indexed.mint,
+        createdAt: Number(indexed.createdAt || Date.now() / 1000) * 1000,
+        ...merged,
+      });
+    }
+    changed = true;
+  }
+
+  if (changed) {
+    write(TOKENS_KEY, tokens);
+    window.dispatchEvent(new CustomEvent('platform:tokens-synced', { detail: tokens }));
+  }
+  return tokens;
+}
+
+function normalizeIndexedToken(existing = {}, indexed = {}) {
+  const prog = Number(indexed.prog ?? indexed.progressPct ?? existing.prog ?? 0);
+  const isMigrated = Boolean(indexed.isMigrated ?? existing.isMigrated);
+  return {
+    mint: indexed.mint,
+    tk: indexed.ticker ?? existing.tk,
+    n: indexed.name ?? existing.n,
+    imageUrl: indexed.imageUrl ?? existing.imageUrl,
+    creator: indexed.creator ?? existing.creator,
+    mode: indexed.poolType ?? existing.mode,
+    poolAddress: indexed.poolAddress ?? existing.poolAddress,
+    meteoraPool: indexed.meteoraPool ?? existing.meteoraPool,
+    isMigrated,
+    col: isMigrated ? 'migrated' : prog >= 50 ? 'bonding' : 'new',
+    mc: Number(indexed.marketCap ?? existing.mc ?? 0),
+    vol: Number(indexed.volume24h ?? existing.vol ?? 0),
+    h: Number(indexed.holders ?? existing.h ?? 0),
+    pct: Number(indexed.pctChange24h ?? existing.pct ?? 0),
+    ath: Number(indexed.ath ?? existing.ath ?? 0),
+    prog,
+    priceSol: Number(indexed.priceSol ?? existing.priceSol ?? 0),
+  };
+}
+
 export function deleteToken(id) {
   const tokens = getTokens().filter(t => t.id !== id);
   write(TOKENS_KEY, tokens);

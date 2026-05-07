@@ -90,6 +90,7 @@ class TokenDetailView {
       // Fan out to components that depend on token metadata.
       this.header.setInfo(info);
       this.market.setInfo(info);
+      this.chart.setInfo(info);
       this.bonding.setInfo(info);
       this.trade.setInfo(info);
     } catch (err) {

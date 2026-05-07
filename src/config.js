@@ -6,6 +6,7 @@ export const CONFIG = {
   livekitApiKey: import.meta.env.VITE_LIVEKIT_API_KEY || '',
  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   wsServerUrl: import.meta.env.VITE_WS_SERVER_URL || 'ws://localhost:3001',
+  apiServerUrl: import.meta.env.VITE_API_SERVER_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000',
   jupiterApiUrl: import.meta.env.VITE_JUPITER_API_URL || 'https://quote-api.jup.ag/v6',
   platformName: import.meta.env.VITE_PLATFORM_NAME || 'CARPET',
   platformFeeBps: Number(import.meta.env.VITE_PLATFORM_FEE_BPS) || 100,

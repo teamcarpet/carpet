@@ -12,8 +12,15 @@
 //     → server pushes { type: 'trade', trade: {...} } for each new trade.
 
 import { CONFIG } from '../../config.js';
+<<<<<<< HEAD
 const API_ROOT = CONFIG.apiUrl;
 const WS_ROOT = CONFIG.wsServerUrl;
+=======
+
+const API_ROOT = CONFIG.apiServerUrl;
+const WS_ROOT = CONFIG.wsServerUrl;
+
+>>>>>>> 31c2a18 (Fix indexer runtime sync and frontend token metrics)
 export async function fetchTrades({ mint, limit = 100, minSol = 0 }) {
   try {
     const params = new URLSearchParams({ mint, limit: String(limit) });
