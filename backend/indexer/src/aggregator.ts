@@ -19,9 +19,12 @@ async function refreshLatest(): Promise<void> {
   const window = new Date(now.getTime() - 5 * 60 * 1000);  // last 5 min
   for (const view of VIEWS) {
     try {
-      // Refresh the latest window only — full refresh is expensive
+      // Refresh the latest window only — full refresh is expensive.
+      // Note the explicit ::timestamptz casts: postgres-js can't infer the
+      // parameter type otherwise (Postgres reports
+      // "could not determine data type of parameter $1").
       await sql.unsafe(
-        `CALL refresh_continuous_aggregate('${view}', $1, $2)`,
+        `CALL refresh_continuous_aggregate('${view}', $1::timestamptz, $2::timestamptz)`,
         [window.toISOString(), now.toISOString()],
       );
     } catch (err) {

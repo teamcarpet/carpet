@@ -3,14 +3,6 @@
 //
 // Subscribes to ALL transactions involving the CARPET program ID, decodes
 // Anchor events from CPI logs, and dispatches typed events to the handlers.
-//
-// Phase 1 status: connection scaffold only. Decoding + handler wiring come
-// in Phase 3 — at that point we'll need contracts/target/idl/launchpad.json
-// imported as a JSON module for Anchor's BorshCoder.
-//
-// Reference:
-//   https://github.com/rpcpool/yellowstone-grpc
-//   https://docs.shyft.to/solana-yellowstone-grpc/solana-grpc-best-practices
 // ─────────────────────────────────────────────────────────────────────────
 
 import type Redis from 'ioredis';
@@ -52,8 +44,6 @@ export async function startGeyser(opts: GeyserOpts): Promise<void> {
   });
 
   // ── Subscription request ───────────────────────────────────────────────
-  // Filter to transactions that touch our program. Yellowstone re-checks
-  // server-side, so we don't waste bandwidth.
   const request: SubscribeRequest = {
     accounts:           {},
     slots:              {},
@@ -79,31 +69,46 @@ export async function startGeyser(opts: GeyserOpts): Promise<void> {
     stream = await client.subscribe();
   } catch (err) {
     logger.error({ err: (err as Error).message }, 'Failed to open gRPC stream');
-    setTimeout(() => startGeyser(opts), 5000);  // retry
+    setTimeout(() => startGeyser(opts), 5000);
     return;
   }
 
   stream.on('data', (msg: any) => {
-    if (msg.transaction) {
-      const tx = msg.transaction.transaction;
-      const signature = extractSignature(tx);
-      const logs = extractLogs(tx);
-      logger.debug({
-        slot: msg.transaction.slot,
-        sig:  signature.slice(0, 16),
-      }, 'tx received');
-      if (program && logs.length) {
-        void dispatchEvents({
-          redis: opts.redis,
-          program,
-          signature,
-          slot: Number(msg.transaction.slot || 0),
-          events: decodeEvents(logs),
-        }).catch((err) => {
-          logger.error({ err: err.message, sig: signature }, 'event dispatch failed');
-        });
-      }
-    }
+    if (!msg.transaction) return;
+
+    const tx = msg.transaction.transaction;
+    const signature = extractSignature(tx);
+    const logs = extractLogs(tx);
+
+    logger.debug({
+      slot: msg.transaction.slot,
+      sig:  signature.slice(0, 16),
+      logCount: logs.length,
+    }, 'tx received');
+
+    if (!program || !logs.length) return;
+
+    const events = decodeEvents(logs);
+    logger.info({
+      sig: signature.slice(0, 16),
+      eventCount: events.length,
+      eventNames: events.map(e => e.name),
+      logCount: logs.length,
+    }, 'tx decoded');
+
+    void dispatchEvents({
+      redis: opts.redis,
+      program,
+      signature,
+      slot: Number(msg.transaction.slot || 0),
+      events,
+    }).catch((err) => {
+      logger.error({
+        err: err.message,
+        stack: err.stack,
+        sig: signature.slice(0, 16),
+      }, 'event dispatch failed');
+    });
   });
 
   stream.on('error', (err: Error) => {
