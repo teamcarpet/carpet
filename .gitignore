@@ -80,4 +80,4 @@ coverage/
 # Lockfile choice — keep ONE
 # (don't commit both yarn and npm lockfiles)
 # yarn.lock
-# pnpm-lock.yaml
+# pnpm-lock.yaml.DS_Store
