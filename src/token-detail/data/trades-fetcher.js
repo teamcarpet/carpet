@@ -1,19 +1,21 @@
 // src/token-detail/data/trades-fetcher.js
 // Live trades client for the Carpet indexer.
 //
-// Backend contract (https://api.carpet.fun):
+// Backend contract:
 //
 //   GET /trades?mint=X&limit=N&minSol=0.05
 //     → 200 { trades: [{ account, type, amountSol, amountToken, timestamp, signature }, ...] }
 //        type: 'buy' | 'sell'
 //        timestamp: unix seconds
 //
-//   WS wss://api.carpet.fun/trades-stream?mint=X&minSol=0.05
+//   WS  /trades-stream?mint=X&minSol=0.05
 //     → server pushes { type: 'trade', trade: {...} } for each new trade.
 
 import { CONFIG } from '../../config.js';
+
 const API_ROOT = CONFIG.apiUrl;
-const WS_ROOT = CONFIG.wsServerUrl;
+const WS_ROOT  = CONFIG.wsServerUrl;
+
 export async function fetchTrades({ mint, limit = 100, minSol = 0 }) {
   try {
     const params = new URLSearchParams({ mint, limit: String(limit) });

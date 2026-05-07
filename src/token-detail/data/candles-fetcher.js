@@ -1,7 +1,7 @@
 // src/token-detail/data/candles-fetcher.js
 // REST + WebSocket client for OHLCV candles from the Carpet indexer.
 //
-// Backend contract (https://api.carpet.fun):
+// Backend contract:
 //
 //   GET /candles?mint=X&resolution=R&from=T1&to=T2&priceMode=mcap|price&countBack=N
 //     → 200 { bars: [{ time, open, high, low, close, volume }, ...] }
@@ -9,7 +9,7 @@
 //        OHLC: numbers (USD or SOL depending on priceMode)
 //        volume: number (token units)
 //
-//   WS wss://api.carpet.fun/stream?mint=X&resolution=R&priceMode=M
+//   WS  /stream?mint=X&resolution=R&priceMode=M
 //     → server pushes { type: 'bar', bar: { time, open, high, low, close, volume } }
 //        every time a new candle closes or the current candle updates.
 //
@@ -20,6 +20,7 @@ import { CONFIG } from '../../config.js';
 
 const API_ROOT = CONFIG.apiUrl;
 const WS_ROOT  = CONFIG.wsServerUrl;
+
 // ── REST ────────────────────────────────────────────────────────────────────
 
 export async function fetchCandles({ mint, resolution, from, to, countBack, priceMode = 'mcap' }) {
