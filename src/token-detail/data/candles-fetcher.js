@@ -17,12 +17,6 @@
 // No hardcoded data. No fake bars. Empty = empty.
 
 import { CONFIG } from '../../config.js';
-<<<<<<< HEAD
-=======
-
-const API_ROOT = CONFIG.apiServerUrl;
-const WS_ROOT  = CONFIG.wsServerUrl;
->>>>>>> 31c2a18 (Fix indexer runtime sync and frontend token metrics)
 
 const API_ROOT = CONFIG.apiUrl;
 const WS_ROOT  = CONFIG.wsServerUrl;
