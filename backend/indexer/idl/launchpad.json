@@ -3304,7 +3304,117 @@
         117,
         3,
         86
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "docs": [
+              "Pool creator"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Token mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "virtual_sol_reserves",
+            "docs": [
+              "Virtual SOL reserves for price calculation"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "virtual_token_reserves",
+            "docs": [
+              "Virtual token reserves for price calculation"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "real_sol_reserves",
+            "docs": [
+              "Actual SOL collected (in lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "real_token_reserves",
+            "docs": [
+              "Actual tokens remaining in vault"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "initial_real_token_reserves",
+            "docs": [
+              "Initial token supply loaded into vault"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "migration_target",
+            "docs": [
+              "SOL target for migration (lamports, default: 100 SOL)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_buy_bps",
+            "docs": [
+              "Max buy percentage in basis points (100 = 1%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "buyback_treasury",
+            "docs": [
+              "Accumulated sell tax SOL for buyback treasury (lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "is_migrated",
+            "docs": [
+              "Pool has been migrated to Meteora"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "is_paused",
+            "docs": [
+              "Pool-level pause"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "sol_vault_bump",
+            "docs": [
+              "SOL vault bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "token_vault_bump",
+            "docs": [
+              "Token vault bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
     },
     {
       "name": "BuybackState",
@@ -3317,7 +3427,198 @@
         32,
         210,
         84
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "docs": [
+              "Associated pool pubkey"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Associated token mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "meteora_pool",
+            "docs": [
+              "Meteora DAMM pool created during migration \u2014 validated on every buyback"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "lp_custody",
+            "docs": [
+              "Program PDA that owns/custodies the LP position."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "position_nft_mint",
+            "docs": [
+              "Meteora position NFT mint for the principal LP position."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury_balance",
+            "docs": [
+              "SOL remaining in buyback treasury (lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "initial_treasury",
+            "docs": [
+              "Initial treasury at migration time \u2014 used as the *fixed* base for",
+              "`bps_per_round` calculations so every round spends the same absolute",
+              "SOL regardless of remaining balance. Without this the 5th round",
+              "would spend 10% of what's left, not 10% of the original pool."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "last_buyback_slot",
+            "docs": [
+              "Last slot a buyback was executed"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "last_buyback_ts",
+            "docs": [
+              "Last unix timestamp a buyback was executed (for presale interval gating)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "total_sol_spent",
+            "docs": [
+              "Total SOL spent on buybacks"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_tokens_bought",
+            "docs": [
+              "Total tokens bought back"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_tokens_burned",
+            "docs": [
+              "Total tokens burned"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "idle_tokens",
+            "docs": [
+              "Explicit idle token accounting. Must remain zero for burn-only buybacks."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_fee_bps",
+            "docs": [
+              "Creator share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_fee_bps",
+            "docs": [
+              "Keeper reward share of claimed LP fees in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_token_allocation",
+            "docs": [
+              "Creator token allocation claimable from the presale vault."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "creator_tokens_claimed",
+            "docs": [
+              "Creator tokens already claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lp_fees_claimed_a",
+            "docs": [
+              "Total token-A LP fees distributed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lp_fees_claimed_b",
+            "docs": [
+              "Total token-B LP fees distributed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pool_type",
+            "docs": [
+              "Pool type (0 = bonding, 1 = presale)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "total_rounds",
+            "docs": [
+              "\u2500\u2500 Presale scheduled-round fields (unused for bonding) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+              "Total rounds configured (6 for Regular, 12 for Extreme; 0 for bonding)"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "rounds_executed",
+            "docs": [
+              "Rounds already executed"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bps_per_round",
+            "docs": [
+              "BPS of `initial_treasury` spent per round (1000 = 10%, 500 = 5%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "round_interval_seconds",
+            "docs": [
+              "Seconds between rounds (14_400 or 1_800 for presale)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
     },
     {
       "name": "GlobalConfig",
@@ -3330,7 +3631,136 @@
         252,
         176,
         217
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Full admin authority"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pause_authority",
+            "docs": [
+              "Can pause/unpause only"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dev_wallet",
+            "docs": [
+              "Receives dev portion of fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_wallet",
+            "docs": [
+              "Receives platform portion of fees"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dev_fee_bps",
+            "docs": [
+              "Dev fee in basis points (default: 50 = 0.5%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "platform_fee_bps",
+            "docs": [
+              "Platform fee in basis points (default: 50 = 0.5%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "sell_tax_bps",
+            "docs": [
+              "Sell tax in basis points (default: 2400 = 24%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "presale_platform_fee_bps",
+            "docs": [
+              "Presale buy fee in basis points (default: 100 = 1%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "migration_fee_bps",
+            "docs": [
+              "Migration fee in basis points (default: 100 = 1%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_fee_bps",
+            "docs": [
+              "Creator share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_fee_bps",
+            "docs": [
+              "Keeper reward share of claimed LP fees in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "keeper_wallet",
+            "docs": [
+              "Fixed protocol keeper wallet for LP fee harvesting and rewards"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_admin",
+            "docs": [
+              "Pending admin for two-step transfer (Pubkey::default() = none)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "is_paused",
+            "docs": [
+              "Global pause flag"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "allowed_meteora_configs",
+            "docs": [
+              "Allowed Meteora pool configs for migrations."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "name": "PresalePool",
@@ -3343,7 +3773,128 @@
         60,
         76,
         118
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "docs": [
+              "Pool creator"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Token mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "migration_target",
+            "docs": [
+              "SOL target for migration (lamports, 100-10000 SOL)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_raised",
+            "docs": [
+              "Total SOL raised so far (lamports)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_token_supply",
+            "docs": [
+              "Total token supply for distribution"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_buy_bps",
+            "docs": [
+              "Max contribution per wallet in basis points (100 = 1%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "creator_pool_bps",
+            "docs": [
+              "Creator pool percentage in basis points (2000 = 20%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "end_time",
+            "docs": [
+              "Presale end time (unix timestamp)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "num_contributors",
+            "docs": [
+              "Number of unique contributors"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "presale_mode",
+            "docs": [
+              "Buyback schedule mode \u2014 chosen at pool creation, immutable"
+            ],
+            "type": {
+              "defined": {
+                "name": "PresaleMode"
+              }
+            }
+          },
+          {
+            "name": "is_migrated",
+            "docs": [
+              "Pool has been migrated to Meteora"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "is_paused",
+            "docs": [
+              "Pool-level pause"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "sol_vault_bump",
+            "docs": [
+              "SOL vault bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "token_vault_bump",
+            "docs": [
+              "Token vault bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "claimed_contributors",
+            "docs": [
+              "Number of contributor claims already processed."
+            ],
+            "type": "u32"
+          }
+        ]
+      }
     },
     {
       "name": "UserPosition",
@@ -3356,7 +3907,56 @@
         234,
         17,
         27
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "docs": [
+              "User public key"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "docs": [
+              "Pool this position belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Position amount.",
+              "Bonding pools use this as cumulative tokens bought.",
+              "Presale pools use this as cumulative SOL contributed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "tokens_claimed",
+            "docs": [
+              "Whether tokens have been claimed (presale only)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "refund_claimed",
+            "docs": [
+              "Whether refund has been claimed (presale only)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
     }
   ],
   "events": [
