@@ -882,7 +882,7 @@
         {
           "name": "mint",
           "docs": [
-            "Token mint — creator must be mint authority initially"
+            "Token mint \u2014 creator must be mint authority initially"
           ],
           "writable": true
         },
@@ -1050,7 +1050,7 @@
         {
           "name": "mint",
           "docs": [
-            "Token mint — creator must be mint authority"
+            "Token mint \u2014 creator must be mint authority"
           ],
           "writable": true
         },
@@ -1246,7 +1246,7 @@
         {
           "name": "buyback_sol_vault",
           "docs": [
-            "SOL vault PDA — validated in handler via PDA derivation"
+            "SOL vault PDA \u2014 validated in handler via PDA derivation"
           ],
           "writable": true
         },
@@ -1307,7 +1307,7 @@
         {
           "name": "meteora_pool",
           "docs": [
-            "FIX #2: Meteora pool — MUST match the pool recorded during migration"
+            "FIX #2: Meteora pool \u2014 MUST match the pool recorded during migration"
           ],
           "writable": true
         },
@@ -1838,7 +1838,7 @@
         {
           "name": "buyback_token_vault",
           "docs": [
-            "Token vault for buyback — tokens land here during buyback, not in payer wallet"
+            "Token vault for buyback \u2014 tokens land here during buyback, not in payer wallet"
           ],
           "writable": true,
           "pda": {
@@ -1960,7 +1960,7 @@
         {
           "name": "wsol_mint",
           "docs": [
-            "C-7: WSOL mint — validated to be the canonical native mint"
+            "C-7: WSOL mint \u2014 validated to be the canonical native mint"
           ]
         },
         {
@@ -2179,7 +2179,7 @@
         {
           "name": "buyback_token_vault",
           "docs": [
-            "Token vault for buyback — tokens land here during buyback"
+            "Token vault for buyback \u2014 tokens land here during buyback"
           ],
           "writable": true,
           "pda": {
@@ -3371,6 +3371,42 @@
         24,
         38,
         189
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sol_spent",
+          "type": "u64"
+        },
+        {
+          "name": "tokens_received",
+          "type": "u64"
+        },
+        {
+          "name": "mode",
+          "type": "u8"
+        },
+        {
+          "name": "round_number",
+          "docs": [
+            "Round number after this execution (1-indexed). 0 for bonding pools."
+          ],
+          "type": "u8"
+        },
+        {
+          "name": "total_rounds",
+          "docs": [
+            "Total scheduled rounds. 0 for bonding pools."
+          ],
+          "type": "u8"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3384,6 +3420,16 @@
         19,
         198,
         194
+      ],
+      "fields": [
+        {
+          "name": "admin",
+          "type": "pubkey"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3397,6 +3443,40 @@
         249,
         6,
         241
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": "u8"
+        },
+        {
+          "name": "meteora_pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "liquidity_sol",
+          "type": "u64"
+        },
+        {
+          "name": "liquidity_tokens",
+          "type": "u64"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "buyback_allocation",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3410,6 +3490,20 @@
         36,
         174,
         235
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "sol_raised",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3423,6 +3517,32 @@
         220,
         157,
         82
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "creator",
+          "type": "pubkey"
+        },
+        {
+          "name": "pool_type",
+          "type": "u8"
+        },
+        {
+          "name": "migration_target",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3436,6 +3556,24 @@
         95,
         73,
         99
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "user",
+          "type": "pubkey"
+        },
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3449,6 +3587,28 @@
         235,
         141,
         28
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "contributor",
+          "type": "pubkey"
+        },
+        {
+          "name": "sol_amount",
+          "type": "u64"
+        },
+        {
+          "name": "total_raised",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3462,6 +3622,24 @@
         219,
         231,
         232
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "user",
+          "type": "pubkey"
+        },
+        {
+          "name": "sol_amount",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3475,6 +3653,40 @@
         30,
         249,
         190
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "buyer",
+          "type": "pubkey"
+        },
+        {
+          "name": "sol_amount",
+          "type": "u64"
+        },
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "creator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "new_price",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     },
     {
@@ -3488,6 +3700,44 @@
         225,
         94,
         45
+      ],
+      "fields": [
+        {
+          "name": "pool",
+          "type": "pubkey"
+        },
+        {
+          "name": "seller",
+          "type": "pubkey"
+        },
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "sol_amount",
+          "type": "u64"
+        },
+        {
+          "name": "creator_fee",
+          "type": "u64"
+        },
+        {
+          "name": "platform_fee",
+          "type": "u64"
+        },
+        {
+          "name": "sell_tax",
+          "type": "u64"
+        },
+        {
+          "name": "new_price",
+          "type": "u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "i64"
+        }
       ]
     }
   ],
@@ -3920,7 +4170,7 @@
           {
             "name": "meteora_pool",
             "docs": [
-              "Meteora DAMM pool created during migration — validated on every buyback"
+              "Meteora DAMM pool created during migration \u2014 validated on every buyback"
             ],
             "type": "pubkey"
           },
@@ -3948,7 +4198,7 @@
           {
             "name": "initial_treasury",
             "docs": [
-              "Initial treasury at migration time — used as the *fixed* base for",
+              "Initial treasury at migration time \u2014 used as the *fixed* base for",
               "`bps_per_round` calculations so every round spends the same absolute",
               "SOL regardless of remaining balance. Without this the 5th round",
               "would spend 10% of what's left, not 10% of the original pool."
@@ -4056,7 +4306,7 @@
           {
             "name": "total_rounds",
             "docs": [
-              "── Presale scheduled-round fields (unused for bonding) ─────────",
+              "\u2500\u2500 Presale scheduled-round fields (unused for bonding) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
               "Total rounds configured (6 for Regular, 12 for Extreme; 0 for bonding)"
             ],
             "type": "u8"
@@ -4634,7 +4884,7 @@
           {
             "name": "presale_mode",
             "docs": [
-              "Buyback schedule mode — chosen at pool creation, immutable"
+              "Buyback schedule mode \u2014 chosen at pool creation, immutable"
             ],
             "type": {
               "defined": {
