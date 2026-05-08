@@ -20,10 +20,6 @@ import { handleTrade } from './handlers/tokens-bought.js';
 import { handleMigrationCompleted, handleMigrationReady } from './handlers/migration.js';
 import { handlePresaleContribution, handlePresaleClaim, handlePresaleRefund } from './handlers/presale.js';
 import * as anchor from '@coral-xyz/anchor';
-// BN is re-exported by anchor but in ESM `anchor.BN` lands undefined for
-// some build configurations. Import it directly from bn.js (the same package
-// anchor uses internally) to be safe.
-import BN from 'bn.js';
 
 interface GeyserOpts {
   redis:     Redis;
@@ -153,20 +149,26 @@ function pubkey(v: unknown): string {
   return String(v);
 }
 
+// Convert any number-ish value (number, bigint, BN, BN-from-other-package,
+// numeric string) to a JS number. No dependency on anchor.BN — that namespace
+// lands undefined in some ESM build setups, which previously crashed
+// dispatchEvents. Duck-typing via toString() catches BN-shaped objects no
+// matter which bn.js instance produced them.
 function num(v: unknown): number {
   if (v == null) return 0;
-  if (typeof v === 'number') return v;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
   if (typeof v === 'bigint') return Number(v);
-  if (BN.isBN(v)) return Number((v as BN).toString());
-  // Fallback for BN-shaped objects coming from a different bn.js instance
-  // (e.g. duplicated in node_modules) — isBN() returns false across module
-  // boundaries even when the value is morally a BN.
+  if (typeof v === 'string') {
+    const n = Number(v);
+    return Number.isNaN(n) ? 0 : n;
+  }
   if (typeof v === 'object' && typeof (v as any).toString === 'function') {
     const s = (v as any).toString();
     const n = Number(s);
     if (!Number.isNaN(n)) return n;
   }
-  return Number(v);
+  const n = Number(v);
+  return Number.isNaN(n) ? 0 : n;
 }
 
 function sol(lamports: unknown): number {
