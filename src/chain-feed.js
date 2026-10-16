@@ -3,6 +3,7 @@
 // go through the same mergeIndexedTokens() path.
 
 import { PublicKey } from '@solana/web3.js';
+import { CONFIG } from './config.js';
 import { getConnection, getReadOnlyProgram } from './launchpad.js';
 
 const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
@@ -32,7 +33,17 @@ function parseMetadata(data) {
 }
 
 export async function fetchChainTokens() {
-  const program = getReadOnlyProgram();
+  try {
+    return await fetchFrom(getConnection());
+  } catch (err) {
+    if (CONFIG.publicRpc === CONFIG.solanaRpc) throw err;
+    // Primary RPC (e.g. a free Helius key) often rate-limits getProgramAccounts.
+    return fetchFrom(getConnection(CONFIG.publicRpc));
+  }
+}
+
+async function fetchFrom(conn) {
+  const program = getReadOnlyProgram(conn);
   const [bonding, presale] = await Promise.all([
     program.account.bondingCurvePool.all(),
     program.account.presalePool.all().catch(() => []),
@@ -43,7 +54,6 @@ export async function fetchChainTokens() {
   ];
   if (!pools.length) return [];
 
-  const conn = getConnection();
   const metas = [];
   for (let i = 0; i < pools.length; i += 100) {
     const batch = pools.slice(i, i + 100).map(p => metadataPda(p.account.mint));

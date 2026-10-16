@@ -45,8 +45,8 @@ function normalizeIdl(idl) {
 
 const idl = normalizeIdl(idlJson);
 
-export function getConnection() {
-  return new Connection(CONFIG.solanaRpc, 'confirmed');
+export function getConnection(rpcUrl = CONFIG.solanaRpc) {
+  return new Connection(rpcUrl, 'confirmed');
 }
 
 export function getProvider(wallet = getAnchorWallet()) {
@@ -62,13 +62,13 @@ export function getProgram(wallet = getAnchorWallet()) {
 }
 
 // For account reads only — works without a connected wallet.
-export function getReadOnlyProgram() {
+export function getReadOnlyProgram(connection = getConnection()) {
   const readOnlyWallet = {
     publicKey: PublicKey.default,
     signTransaction: () => Promise.reject(new Error('Read-only program')),
     signAllTransactions: () => Promise.reject(new Error('Read-only program')),
   };
-  return new Program(idl, new AnchorProvider(getConnection(), readOnlyWallet, { commitment: 'confirmed' }));
+  return new Program(idl, new AnchorProvider(connection, readOnlyWallet, { commitment: 'confirmed' }));
 }
 
 export function solscanTxUrl(signature) {

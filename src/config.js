@@ -1,5 +1,9 @@
 export const CONFIG = {
   solanaRpc: import.meta.env.VITE_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+  // Public RPC used for read-only data when the primary RPC rate-limits us.
+  publicRpc: (import.meta.env.VITE_LAUNCHPAD_CLUSTER || 'devnet') === 'mainnet'
+    ? 'https://api.mainnet-beta.solana.com'
+    : 'https://api.devnet.solana.com',
   pinataGateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud',
   livekitUrl: import.meta.env.VITE_LIVEKIT_URL || '',
   // Uploads + LiveKit tokens: same-origin /api (Vercel Functions in api/,

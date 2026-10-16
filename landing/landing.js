@@ -129,15 +129,26 @@ async function discriminator(name) {
   return btoa(String.fromCharCode(...new Uint8Array(hash).slice(0, 8)));
 }
 
-async function rpc(method, params) {
-  const res = await fetch(CONFIG.solanaRpc, {
+async function rpcAt(url, method, params) {
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
   });
+  if (!res.ok) throw new Error(`RPC ${res.status}`);
   const json = await res.json();
   if (json.error) throw new Error(json.error.message);
   return json.result;
+}
+
+// Primary RPC first; fall back to the public one if it rate-limits (429) or fails.
+async function rpc(method, params) {
+  try {
+    return await rpcAt(CONFIG.solanaRpc, method, params);
+  } catch (err) {
+    if (CONFIG.publicRpc === CONFIG.solanaRpc) throw err;
+    return rpcAt(CONFIG.publicRpc, method, params);
+  }
 }
 
 async function programAccounts(accountName, dataSlice) {
