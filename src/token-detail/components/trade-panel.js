@@ -1,3 +1,4 @@
+import { esc } from '../../escape.js';
 // src/token-detail/components/trade-panel.js
 // Buy / Sell side panel.
 // Logic is delegated to `onTrade` callback passed from main.js — this keeps
@@ -23,7 +24,7 @@ export class TradePanel {
 
   _render() {
     const isBuy = this.side === 'buy';
-    const ticker = this.info?.tk || '…';
+    const ticker = esc(this.info?.tk || '…');
     const isPresale = this.info?.mode === 'presale' && !this.info?.isMigrated;
     const primaryLabel = isPresale
       ? (isBuy ? 'Contribute' : 'Claim')
@@ -45,7 +46,7 @@ export class TradePanel {
           <input class="td-trade-input"
                  type="number" min="0" step="any"
                  placeholder="${isPresale && !isBuy ? 'No amount needed' : '0.00'}"
-                 value="${this.amount}"
+                 value="${esc(this.amount)}"
                  ${isPresale && !isBuy ? 'disabled' : ''}
                  data-act="amount">
           <div class="td-trade-unit">${isBuy ? 'SOL' : `$${ticker}`}</div>

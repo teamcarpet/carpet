@@ -1,16 +1,19 @@
 export const CONFIG = {
   solanaRpc: import.meta.env.VITE_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-  pinataJwt: import.meta.env.VITE_PINATA_JWT || '',
   pinataGateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud',
   livekitUrl: import.meta.env.VITE_LIVEKIT_URL || '',
-  livekitApiKey: import.meta.env.VITE_LIVEKIT_API_KEY || '',
- apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  // Uploads + LiveKit tokens: same-origin /api (Vercel Functions in api/,
+  // proxied to server/index.js in local dev). Secrets live only server-side.
+  appServerUrl: import.meta.env.VITE_APP_SERVER_URL || '/api',
+  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   wsServerUrl: import.meta.env.VITE_WS_SERVER_URL || 'ws://localhost:3001',
   apiServerUrl: import.meta.env.VITE_API_SERVER_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  jupiterApiUrl: import.meta.env.VITE_JUPITER_API_URL || 'https://quote-api.jup.ag/v6',
+  jupiterApiUrl: import.meta.env.VITE_JUPITER_API_URL || 'https://lite-api.jup.ag/swap/v1',
   platformName: import.meta.env.VITE_PLATFORM_NAME || 'CARPET',
   platformFeeBps: Number(import.meta.env.VITE_PLATFORM_FEE_BPS) || 100,
   feeWallet: import.meta.env.VITE_FEE_WALLET || '',
+  // Max price movement accepted between quote and execution (300 = 3%).
+  slippageBps: Number(import.meta.env.VITE_SLIPPAGE_BPS) || 300,
 
   // Launchpad program
   LAUNCHPAD: {

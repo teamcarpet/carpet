@@ -1,3 +1,7 @@
+import { esc } from '../../escape.js';
+import { solscanTxUrl } from '../../launchpad.js';
+
+const isBase58Signature = (s) => typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(s);
 // src/token-detail/components/trades-table.js
 // Live trades table under the chart.
 //
@@ -121,14 +125,14 @@ export class TradesTable {
     const sideCls = r.type === 'buy' ? 'up' : 'dn';
     return `
       <div class="td-trades-row">
-        <div class="td-trades-addr">${shorten(r.account, 5)}</div>
-        <div class="td-trades-side ${sideCls}">${r.type?.toUpperCase() || '—'}</div>
+        <div class="td-trades-addr">${esc(shorten(r.account, 5))}</div>
+        <div class="td-trades-side ${sideCls}">${esc(r.type?.toUpperCase() || '—')}</div>
         <div>${fmtSol(r.amountSol)}</div>
         <div>${fmtToken(r.amountToken)}</div>
-        <div class="td-trades-time" data-ts="${r.timestamp || ''}">${fmtAgo(r.timestamp)}</div>
+        <div class="td-trades-time" data-ts="${esc(r.timestamp || '')}">${fmtAgo(r.timestamp)}</div>
         <div class="td-trades-txn">
-          ${r.signature
-            ? `<a href="https://solscan.io/tx/${r.signature}?cluster=devnet" target="_blank" rel="noopener">${shorten(r.signature, 4)}</a>`
+          ${isBase58Signature(r.signature)
+            ? `<a href="${solscanTxUrl(r.signature)}" target="_blank" rel="noopener">${shorten(r.signature, 4)}</a>`
             : '—'}
         </div>
       </div>

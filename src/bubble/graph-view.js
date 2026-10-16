@@ -1,3 +1,4 @@
+import { esc } from '../escape.js';
 // src/bubble/graph-view.js
 // Orchestrates the full graph view: fetch → transform → render → interact.
 
@@ -28,8 +29,8 @@ export class GraphView {
   _renderShell() {
     const tokens = getTokens() || [];
     const token  = tokens.find(t => t.mint === this.mint) || {};
-    const title  = token.tk ? `$${token.tk}` : shorten(this.mint, 6);
-    const subtitle = token.n || 'Token';
+    const title  = esc(token.tk ? `$${token.tk}` : shorten(this.mint, 6));
+    const subtitle = esc(token.n || 'Token');
 
     this.el.innerHTML = `
       <div class="bm-gv-topbar">

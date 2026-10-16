@@ -16,7 +16,8 @@ use crate::state::{BondingCurvePool, BuybackState, GlobalConfig, ACTIVATION_DELA
 
 #[derive(Accounts)]
 pub struct MigrateBonding<'info> {
-    /// C-6: Only admin can trigger migration
+    /// C-6: Admin or the configured keeper can trigger migration, so the
+    /// keeper bot keeps migrations live without holding the admin key.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -24,7 +25,8 @@ pub struct MigrateBonding<'info> {
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
         constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
-        constraint = config.admin == payer.key() @ LaunchpadError::UnauthorizedAdmin,
+        constraint = config.admin == payer.key() || config.keeper_wallet == payer.key()
+            @ LaunchpadError::UnauthorizedAdmin,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -403,9 +405,16 @@ fn calculate_bonding_migration_split(
     buyback_treasury: u64,
     remaining_tokens: u64,
 ) -> Result<(u64, u64, u64, u64)> {
-    let (migration_fee, _) = fees::calculate_migration_fee(total_sol, migration_fee_bps)?;
-    let liquidity_sol = fees::apply_bps(total_sol, 8000)?;
-    let base_buyback_sol = total_sol
+    // `total_sol` (pool.real_sol_reserves) already contains the accumulated
+    // sell tax, because sells only decrease reserves by `gross - sell_tax`.
+    // Split only the curve proceeds, then hand the tax to the buyback as-is,
+    // so the parts sum to exactly what the vault holds.
+    let curve_sol = total_sol
+        .checked_sub(buyback_treasury)
+        .ok_or(LaunchpadError::MathUnderflow)?;
+    let (migration_fee, _) = fees::calculate_migration_fee(curve_sol, migration_fee_bps)?;
+    let liquidity_sol = fees::apply_bps(curve_sol, 8000)?;
+    let base_buyback_sol = curve_sol
         .checked_sub(migration_fee)
         .ok_or(LaunchpadError::MathUnderflow)?
         .checked_sub(liquidity_sol)
@@ -498,7 +507,8 @@ mod tests {
 
     #[test]
     fn bonding_migration_split_uses_all_available_sol() {
-        let total_sol = 100_000_000_000;
+        // 102 SOL in the vault: 100 SOL of curve proceeds + 2 SOL of sell tax.
+        let total_sol = 102_000_000_000;
         let buyback_treasury = 2_000_000_000;
         let (fee, liquidity, buyback, liquidity_tokens) =
             calculate_bonding_migration_split(total_sol, 100, buyback_treasury, 1_000_000).unwrap();
@@ -506,8 +516,42 @@ mod tests {
         assert_eq!(fee, 1_000_000_000);
         assert_eq!(liquidity, 80_000_000_000);
         assert_eq!(buyback, 21_000_000_000);
-        assert_eq!(fee + liquidity + buyback, total_sol + buyback_treasury);
+        // Never promise the buyback more SOL than the vault actually holds.
+        assert_eq!(fee + liquidity + buyback, total_sol);
         assert_eq!(liquidity_tokens, 1_000_000);
+    }
+
+    #[test]
+    fn migration_split_matches_vault_after_buys_and_sells() {
+        use crate::math::{bonding_curve, fees};
+
+        // Mirror buy_bonding / sell_bonding accounting and track the real vault.
+        let (mut vsr, mut vtr) = (30_000_000_000u64, 1_000_000_000_000_000u64);
+        let (mut real_sol, mut treasury, mut vault) = (0u64, 0u64, 0u64);
+
+        for _ in 0..40 {
+            let buy = fees::calculate_buy_fees(3_000_000_000, 50, 50).unwrap();
+            let out = bonding_curve::calculate_buy_amount(vsr, vtr, buy.net_amount).unwrap();
+            vsr += buy.net_amount;
+            vtr -= out;
+            real_sol += buy.net_amount;
+            vault += buy.net_amount;
+
+            let sell_tokens = out / 3;
+            let gross = bonding_curve::calculate_sell_amount(vsr, vtr, sell_tokens).unwrap();
+            let sell = fees::calculate_sell_fees(gross, 50, 50, 2400).unwrap();
+            vsr -= gross;
+            vtr += sell_tokens;
+            real_sol -= gross - sell.sell_tax;
+            treasury += sell.sell_tax;
+            vault -= sell.net_amount + sell.creator_fee + sell.platform_fee;
+        }
+        assert_eq!(real_sol, vault);
+
+        let (fee, liquidity, buyback, _) =
+            calculate_bonding_migration_split(real_sol, 100, treasury, 1).unwrap();
+        assert_eq!(fee + liquidity + buyback, vault);
+        assert!(buyback >= treasury);
     }
 
     #[test]

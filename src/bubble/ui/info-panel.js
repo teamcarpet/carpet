@@ -1,3 +1,4 @@
+import { esc } from '../../escape.js';
 // src/bubble/ui/info-panel.js
 // Floating panel anchored top-left of the graph view.
 // Shows details of the currently selected node.
@@ -52,7 +53,7 @@ export class InfoPanel {
     if (!node) return this.hide();
     const flows = buildNodeFlows(node.id, graph.links);
     const cat = CATEGORY_COLORS[node.category] || CATEGORY_COLORS.wallet;
-    const title = node.label || shorten(node.address, 6);
+    const title = esc(node.label || shorten(node.address, 6));
     const catLabel = node.category[0].toUpperCase() + node.category.slice(1);
 
     this.el.innerHTML = `
@@ -64,9 +65,9 @@ export class InfoPanel {
         <button class="bm-ip-close" data-act="close" aria-label="Close">×</button>
       </div>
       <div class="bm-ip-addr">
-        <code>${shorten(node.address, 6)}</code>
-        <button class="bm-ip-icon" data-act="copy" data-val="${node.address}" title="Copy address">⧉</button>
-        <button class="bm-ip-icon" data-act="solscan" data-val="${node.address}" title="Open in Solscan">↗</button>
+        <code>${esc(shorten(node.address, 6))}</code>
+        <button class="bm-ip-icon" data-act="copy" data-val="${esc(node.address)}" title="Copy address">⧉</button>
+        <button class="bm-ip-icon" data-act="solscan" data-val="${esc(node.address)}" title="Open in Solscan">↗</button>
       </div>
       <div class="bm-ip-row">
         <span class="bm-ip-k">Category</span>

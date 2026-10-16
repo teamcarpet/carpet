@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::LaunchpadError;
 use crate::events::ConfigUpdated;
-use crate::state::{GlobalConfig, KEEPER_WALLET};
+use crate::state::{GlobalConfig, KEEPER_WALLET, MAX_SELL_TAX_BPS};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct InitializeParams {
@@ -43,7 +43,7 @@ pub fn handle_initialize(ctx: Context<Initialize>, params: InitializeParams) -> 
         LaunchpadError::InvalidFeeConfig
     );
     require!(
-        params.sell_tax_bps <= 5000, // max 50%
+        params.sell_tax_bps <= MAX_SELL_TAX_BPS,
         LaunchpadError::InvalidFeeConfig
     );
     require!(

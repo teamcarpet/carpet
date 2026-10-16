@@ -1,3 +1,4 @@
+import { esc, safeUrl } from '../../escape.js';
 // src/token-detail/components/header.js
 // Top bar: avatar + ticker + name + author + age + share/address/favourite controls.
 
@@ -31,13 +32,14 @@ export class Header {
 
   _render() {
     const i = this.info || {};
-    const ticker   = i.tk ? `$${i.tk}` : shorten(this.mint, 6);
-    const name     = i.n  || 'Loading…';
-    const author   = i.creator ? shorten(i.creator, 4) : '';
+    const ticker   = esc(i.tk ? `$${i.tk}` : shorten(this.mint, 6));
+    const name     = esc(i.n  || 'Loading…');
+    const author   = esc(i.creator ? shorten(i.creator, 4) : '');
     const age      = fmtAge(i.createdAt);
-    const img      = i.imageUrl
-      ? `<img class="td-hdr-img" src="${i.imageUrl}" alt="">`
-      : `<div class="td-hdr-img td-hdr-emoji">${i.em || '🎯'}</div>`;
+    const imgUrl   = safeUrl(i.imageUrl);
+    const img      = imgUrl
+      ? `<img class="td-hdr-img" src="${esc(imgUrl)}" alt="">`
+      : `<div class="td-hdr-img td-hdr-emoji">${esc(i.em || '🎯')}</div>`;
 
     this.host.innerHTML = `
       <div class="td-hdr">
@@ -54,7 +56,7 @@ export class Header {
         </div>
         <div class="td-hdr-actions">
           <button class="td-hdr-btn" data-act="share"    title="Share">↗</button>
-          <button class="td-hdr-btn" data-act="copy"     title="Copy mint address">${shorten(this.mint, 4)}</button>
+          <button class="td-hdr-btn" data-act="copy"     title="Copy mint address">${esc(shorten(this.mint, 4))}</button>
           <button class="td-hdr-btn" data-act="favourite" title="Favourite">☆</button>
         </div>
       </div>

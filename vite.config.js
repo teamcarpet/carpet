@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
@@ -14,6 +15,11 @@ export default defineConfig({
   build: {
     target: 'esnext',
     rollupOptions: {
+      // `/` is the marketing landing, `/app/` is the trading terminal.
+      input: {
+        landing: fileURLToPath(new URL('./index.html', import.meta.url)),
+        app: fileURLToPath(new URL('./app/index.html', import.meta.url)),
+      },
       output: {
         manualChunks: {
           solana: ['@solana/web3.js', '@solana/spl-token'],
@@ -21,6 +27,13 @@ export default defineConfig({
         },
       },
     },
+  },
+  server: {
+    // server/index.js runs the same handlers Vercel serves from api/.
+    proxy: { '/api': 'http://localhost:3002' },
+  },
+  preview: {
+    proxy: { '/api': 'http://localhost:3002' },
   },
   optimizeDeps: {
     esbuildOptions: {

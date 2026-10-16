@@ -1,3 +1,4 @@
+import { esc } from '../escape.js';
 // src/bubble/search-view.js
 // Two-column landing view for Bubble Map:
 //   - Trending Tokens:  CARPET tokens by volume × (1 + age bonus)
@@ -46,14 +47,14 @@ function renderRow(t) {
   const mc  = fmtMoney(t.mc);
   const vol = fmtMoney(t.vol);
   const img = t.imageUrl
-    ? `<img src="${t.imageUrl}" class="bm-sv-img" alt="">`
-    : `<div class="bm-sv-emoji">${t.em || '🎯'}</div>`;
+    ? `<img src="${esc(t.imageUrl)}" class="bm-sv-img" alt="">`
+    : `<div class="bm-sv-emoji">${esc(t.em || '🎯')}</div>`;
   return `
-    <div class="bm-sv-row" data-mint="${t.mint}">
+    <div class="bm-sv-row" data-mint="${esc(t.mint)}">
       ${img}
       <div class="bm-sv-col-name">
-        <div class="bm-sv-tk">${t.tk || '???'}</div>
-        <div class="bm-sv-n">${t.n || 'Unnamed'}</div>
+        <div class="bm-sv-tk">${esc(t.tk || '???')}</div>
+        <div class="bm-sv-n">${esc(t.n || 'Unnamed')}</div>
       </div>
       <div class="bm-sv-col-vol">${vol}</div>
       <div class="bm-sv-col-mc">

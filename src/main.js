@@ -1,3 +1,4 @@
+import { esc } from './escape.js';
 import {
   connectWallet, disconnectWallet, isConnected,
   getPublicKey, getBalance, getShortAddress,
@@ -21,7 +22,7 @@ import {
 import { uploadFileToPinata, uploadTokenMetadata } from './ipfs.js';
 import {
   getTokens, getToken, addToken, updateToken, deleteToken,
-  getTickerTokens,
+  getTickerTokens, mergeIndexedTokens,
 } from './platform.js';
 import { CONFIG } from './config.js';
 import {
@@ -212,7 +213,7 @@ export function refreshTicker() {
   if (!inner) return;
   const sep = '<span class="ti-sep">◊</span>';
   const doubled = [...tokens, ...tokens].map(t =>
-    `<div class="ti"><span class="ti-n">$${t.ticker}</span> <span class="${t.pct >= 0 ? 'up-c' : 'dn-c'}">${t.pct >= 0 ? '+' : ''}${(t.pct || 0).toFixed(1)}%</span></div>`
+    `<div class="ti"><span class="ti-n">$${esc(t.ticker)}</span> <span class="${t.pct >= 0 ? 'up-c' : 'dn-c'}">${t.pct >= 0 ? '+' : ''}${(t.pct || 0).toFixed(1)}%</span></div>`
   ).join(sep);
   inner.innerHTML = doubled;
 }
@@ -229,11 +230,11 @@ function buildCrs() {
     const k = t.col === 'migrated' ? 'migrated' : t.mode === 'presale' ? 'presale' : 'bonding';
     return `<div class="ccard" data-k="${k}" onclick="window._app.openDet('${t.id}')">
       <div class="ccard-top">
-        <div class="ccard-em">${t.em || '🎯'}</div>
+        <div class="ccard-em">${esc(t.em || '🎯')}</div>
         <div class="ccard-inf">
           <div class="ccard-rank">#${String(i + 1).padStart(2, '0')} · Volume Rank</div>
-          <div class="ccard-name">${t.n}</div>
-          <div class="ccard-tk">$${t.tk}</div>
+          <div class="ccard-name">${esc(t.n)}</div>
+          <div class="ccard-tk">$${esc(t.tk)}</div>
         </div>
         <div class="ccard-pct ${(t.pct || 0) >= 0 ? 'up-c' : 'dn-c'}">${(t.pct || 0) >= 0 ? '+' : ''}${(t.pct || 0)}%</div>
       </div>
@@ -276,12 +277,12 @@ function buildRow(t) {
     <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;opacity:.55;cursor:not-allowed;" disabled title="Coming after Meteora integration"><iconify-icon icon="solar:wallet-money-bold" style="font-size:10px;"></iconify-icon> Fees: Meteora soon</button>
   ` : '';
   return `<div class="tr ${cls}" onclick="window._app.openDet('${t.id}')">
-    <div class="tr-em">${t.em || '🎯'}</div>
+    <div class="tr-em">${esc(t.em || '🎯')}</div>
     <div class="tr-inf">
       <div class="tr-row">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-          <span class="tr-name">${t.n}</span>
-          <span class="tr-tk">$${t.tk}</span>
+          <span class="tr-name">${esc(t.n)}</span>
+          <span class="tr-tk">$${esc(t.tk)}</span>
           ${editBtn}
           ${creatorBtns}
         </div>
@@ -297,7 +298,7 @@ function buildRow(t) {
 }
 function renderCol(col) {
   let list = getTokens().filter(t => t.col === col);
-  if (searchQ) list = list.filter(t => t.n.toLowerCase().includes(searchQ) || t.tk.toLowerCase().includes(searchQ));
+  if (searchQ) list = list.filter(t => (t.n || '').toLowerCase().includes(searchQ) || (t.tk || '').toLowerCase().includes(searchQ));
   list = sortTokens(list, colSort[col]);
   document.getElementById('col-' + col).innerHTML = list.length ? list.map(buildRow).join('') : `<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);">No tokens in this column</div>`;
   document.getElementById('cnt-' + col).textContent = list.length;
@@ -337,7 +338,7 @@ export function openEditToken(id) {
 }
 export function closeEditToken() { document.getElementById('edit-modal').classList.remove('open'); }
 export async function saveEditToken() {
-  const id = Number(document.getElementById('edit-id').value);
+  const id = document.getElementById('edit-id').value;
   const updates = {
     n: document.getElementById('edit-name').value.trim(),
     d2: document.getElementById('edit-desc').value.trim(),
@@ -390,7 +391,7 @@ function initSwapSelects() {
   ['sft', 'stt'].forEach((id, i) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.innerHTML = tokenList.map(t => `<option value="${t.mint}" ${i === 0 && t.symbol === 'SOL' ? 'selected' : i === 1 && t.symbol === 'BONK' ? 'selected' : ''}>${t.symbol}</option>`).join('');
+    el.innerHTML = tokenList.map(t => `<option value="${esc(t.mint)}" ${i === 0 && t.symbol === 'SOL' ? 'selected' : i === 1 && t.symbol === 'BONK' ? 'selected' : ''}>${esc(t.symbol)}</option>`).join('');
     el.onchange = () => cswap();
   });
 }
@@ -619,9 +620,49 @@ export function pfTab(el, tab) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+// Pull every launched token from the indexer so the feed isn't limited to
+// tokens this browser created. Silent when the API is down.
+const INDEX_SYNC_MS = 30_000;
+async function syncIndexedTokens() {
+  try {
+    const res = await fetch(`${CONFIG.apiUrl}/tokens?limit=100`);
+    if (!res.ok) throw new Error(`indexer ${res.status}`);
+    const { tokens } = await res.json();
+    mergeIndexedTokens(tokens);
+  } catch {
+    // Indexer offline — read pools straight from the program instead.
+    try {
+      const { fetchChainTokens } = await import('./chain-feed.js');
+      mergeIndexedTokens(await fetchChainTokens());
+    } catch (err) {
+      console.warn('[feed] chain fallback failed', err);
+    }
+  }
+}
+window.addEventListener('platform:tokens-synced', () => { renderAll(); refreshTicker(); });
+
+// Landing-page links and share links: ?launch=1, ?view=bubble, ?token=<mint>
+function handleDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const mint = params.get('token');
+  if (mint) {
+    const token = getTokens().find(t => t.mint === mint);
+    if (token) openDet(token.id);
+    else showN('Token not found yet — it may still be indexing');
+  } else if (params.get('launch') === '1') {
+    openLaunch();
+  } else if (params.get('view') === 'bubble') {
+    setView('bubble');
+  }
+}
+
 export function init() {
   renderAll();
   refreshTicker();
+  syncIndexedTokens().then(handleDeepLink);
+  setInterval(syncIndexedTokens, INDEX_SYNC_MS);
+  const netBadge = document.getElementById('net-badge');
+  if (netBadge) netBadge.textContent = CONFIG.LAUNCHPAD.cluster.toUpperCase();
   requestAnimationFrame(() => setTimeout(updCrs, 100));
 
   document.addEventListener('click', e => {

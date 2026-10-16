@@ -1,3 +1,4 @@
+import { esc } from '../../escape.js';
 // src/bubble/ui/address-list.js
 // Right sidebar showing top holders, searchable.
 // Clicking a row focuses the node on the graph.
@@ -79,11 +80,11 @@ export class AddressList {
     rows.innerHTML = list.map((n, i) => {
       const cat = CATEGORY_COLORS[n.category] || CATEGORY_COLORS.wallet;
       const rank = i + 1;
-      const display = n.label || shorten(n.address);
+      const display = esc(n.label || shorten(n.address));
       const bps = n.bps === 0 ? '< 0.01%' : `${(n.bps / 100).toFixed(2)}%`;
       const active = n.id === this.activeId ? ' on' : '';
       return `
-        <div class="bm-al-row${active}" data-addr="${n.id}">
+        <div class="bm-al-row${active}" data-addr="${esc(n.id)}">
           <span class="bm-al-rank">#${rank}</span>
           <span class="bm-al-dot" style="background:${cat.fill};"></span>
           <span class="bm-al-name">${display}</span>

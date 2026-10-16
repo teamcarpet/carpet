@@ -1,762 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CARPET — Launchpad</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/bubble/bubble.css">
-<link rel="stylesheet" href="/src/token-detail/token-detail.css">
-<link rel="stylesheet" href="/mobile-css/mobile-main.css">
-<link rel="stylesheet" href="/mobile-css/mobile-bubble.css">
-<link rel="stylesheet" href="/mobile-css/mobile-token-detail.css">
-<style>
-/* ── Mobile footer clearance fix ──
-   The bottom tab bar is fixed at bottom:0. #shell has min-height:100vh,
-   so footer sits at the bottom of the viewport — directly under the
-   tab bar. Fix: shrink shell's min-height by the tab bar's height so
-   the footer naturally lands ABOVE the tab bar. */
-@media (max-width: 768px) {
-  #shell {
-    min-height: calc(100dvh - 56px - env(safe-area-inset-bottom, 0px)) !important;
-  }
-  body {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  /* A bit of breathing room inside the footer too */
-  #footer {
-    padding-bottom: 22px !important;
-  }
-}
-
-/* ── Bigger logos ── */
-/* Header logo (sidebar top) */
-@media (min-width: 769px) {
-  :root { --sb-w: 64px !important; }
-  .sb-top { height: 72px !important; }
-  #sb .logo-mark { width: 52px !important; height: 52px !important; }
-  #sb .logo-text { font-size: 19px !important; }
-}
-
-/* Footer logo (all viewports) */
-#footer .logo-mark[style*="26px"] {
-  width: 48px !important;
-  height: 48px !important;
-}
-#footer .logo-text { font-size: 22px !important; letter-spacing: 3px !important; }
-#footer .foot-tagline { font-size: 12px !important; }
-</style>
-<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-/* Profile tabs */
-.pf-tab{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;white-space:nowrap;user-select:none}
-.pf-tab:hover{color:var(--text)}
-.pf-tab.on{color:var(--red);border-bottom-color:var(--red)}
-
-:root{
-  --bg:#0B0F18;--bg-2:#0F1422;--bg-3:#131826;--bg-4:#1B2136;
-  --surface:#121726;--surface-hi:#1A2034;
-  --line:rgba(232,234,240,.07);--line-hi:rgba(232,234,240,.14);
-  --red:#FF2D2D;--red-hi:#FF4D4D;--red-lo:#CC1F1F;
-  --red-soft:rgba(255,45,45,.10);--red-softer:rgba(255,45,45,.04);
-  --red-bdr:rgba(255,45,45,.28);--red-bdr-hi:rgba(255,45,45,.5);
-  --red-glow:rgba(255,45,45,.45);
-  --text:#EEF0F5;--text-2:#D6D9E2;
-  --muted:rgba(238,240,245,.58);--dim:rgba(238,240,245,.34);--faint:rgba(238,240,245,.14);
-  --up:#00E5A0;--up-soft:rgba(0,229,160,.10);--up-bdr:rgba(0,229,160,.28);
-  --dn:#FF2D2D;--dn-soft:rgba(255,45,45,.10);--dn-bdr:rgba(255,45,45,.28);
-  --cyan:#00D9FF;--cyan-soft:rgba(0,217,255,.10);--cyan-bdr:rgba(0,217,255,.28);
-  --amber:#FFB800;--amber-soft:rgba(255,184,0,.10);--amber-bdr:rgba(255,184,0,.28);
-  --sb-w:52px;
-  --ease:cubic-bezier(.4,0,.2,1);
-  --font:'Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,monospace;
-}
-
-html,body{height:100%}
-body{
-  font-family:var(--mono);background:var(--bg);color:var(--text);
-  font-size:13px;line-height:1.5;overflow-x:hidden;min-height:100vh;
-  -webkit-font-smoothing:antialiased;
-  background-image:
-    radial-gradient(ellipse at 20% 0%,rgba(255,45,45,.04),transparent 50%),
-    radial-gradient(ellipse at 80% 100%,rgba(0,217,255,.03),transparent 50%),
-    linear-gradient(180deg,var(--bg) 0%,#080B12 100%);
-  background-attachment:fixed;
-}
-.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
-  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:48px 48px;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
-a{text-decoration:none;color:inherit}
-iconify-icon{display:inline-flex;vertical-align:middle}
-button,input,select,textarea{font-family:inherit}
-.sans{font-family:var(--font)}
-.up-c{color:var(--up)}.dn-c{color:var(--dn)}.am-c{color:var(--amber)}
-
-::-webkit-scrollbar{width:7px;height:7px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--red-bdr);border-radius:6px}
-::-webkit-scrollbar-thumb:hover{background:var(--red)}
-
-@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-@keyframes march{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
-@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(255,45,45,.6)}70%{box-shadow:0 0 0 7px rgba(255,45,45,0)}100%{box-shadow:0 0 0 0 rgba(255,45,45,0)}}
-@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
-@keyframes logoTrace{0%{stroke-dashoffset:100}35%{stroke-dashoffset:0}70%{stroke-dashoffset:0}100%{stroke-dashoffset:-100}}
-@keyframes logoSpin{0%,35%{transform:rotate(0deg)}70%,100%{transform:rotate(360deg)}}
-
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;animation:livePulse 1.8s ease-out infinite}
-
-#shell{display:flex;position:relative;z-index:10;min-height:100vh}
-
-/* SIDEBAR */
-#sb{width:var(--sb-w);flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:300;
-  background:linear-gradient(180deg,rgba(11,15,24,.98),rgba(8,11,18,1));
-  border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;
-  transition:width .28s var(--ease);overflow:hidden}
-#sb.open{width:180px}
-.sb-top{width:100%;height:56px;flex-shrink:0;display:flex;align-items:center;
-  border-bottom:1px solid var(--line);cursor:pointer;padding:0 12px;gap:10px;transition:background .2s}
-.sb-top:hover{background:var(--red-softer)}
-.sb-nav{flex:1;width:100%;display:flex;flex-direction:column;padding:10px 0;gap:2px}
-.sbi{width:100%;height:42px;display:flex;align-items:center;padding:0 14px;gap:12px;
-  cursor:pointer;position:relative;color:var(--muted);transition:all .16s var(--ease);overflow:hidden}
-.sbi::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
-  width:2px;height:0;background:var(--red);transition:height .2s var(--ease);box-shadow:0 0 6px var(--red)}
-.sbi:hover{color:var(--text);background:rgba(255,45,45,.06)}
-.sbi.on{color:var(--red);background:rgba(255,45,45,.08)}
-.sbi.on::before{height:20px}
-.sbi-ico{font-size:18px;flex-shrink:0;width:24px;text-align:center;display:flex;align-items:center;justify-content:center}
-.sbi-lbl{font-family:var(--mono);font-size:10.5px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity .15s;letter-spacing:1.5px;text-transform:uppercase}
-#sb.open .sbi-lbl{opacity:1}
-.sb-foot{width:100%;padding:10px 12px;border-top:1px solid var(--line);flex-shrink:0;display:flex;justify-content:center;gap:6px}
-.sb-btn{width:32px;height:32px;border:none;cursor:pointer;border-radius:6px;background:var(--surface);color:var(--muted);font-size:14px;
-  display:flex;align-items:center;justify-content:center;border:1px solid var(--line);transition:all .16s var(--ease)}
-.sb-btn:hover{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 0 14px var(--red-glow)}
-.sb-btn.prim{background:var(--red);color:#fff;border-color:var(--red)}
-.sb-btn.prim:hover{background:var(--red-hi);box-shadow:0 0 16px var(--red-glow)}
-
-/* LOGO */
-.logo-block{display:flex;align-items:center;gap:10px;min-width:0}
-.logo-mark{position:relative;width:32px;height:32px;flex-shrink:0;background:var(--bg-2);border-radius:7px;overflow:visible}
-.logo-mark svg{width:100%;height:100%;display:block}
-.lm-border{stroke-dasharray:100;stroke-dashoffset:100;animation:logoTrace 3.6s linear infinite}
-.lm-c{transform-origin:16px 16px;transform-box:fill-box;animation:logoSpin 3.6s ease-in-out infinite}
-.logo-text{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);letter-spacing:3px;white-space:nowrap}
-#sb .logo-text{display:none}
-#sb.open .logo-text{display:block}
-
-/* MAIN */
-#main{margin-left:var(--sb-w);flex:1;min-width:0;display:flex;flex-direction:column;transition:margin-left .28s var(--ease)}
-body.sb-open #main{margin-left:180px}
-
-/* HEADER */
-#hdr{position:sticky;top:0;z-index:200;height:60px;
-  display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 18px;gap:18px;
-  background:rgba(11,15,24,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
-#hdr::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
-  background:linear-gradient(90deg,transparent,var(--red) 30%,var(--red) 70%,transparent);opacity:.5}
-.hdr-left{display:flex;gap:10px;align-items:center;min-width:0}
-.hdr-mid{display:flex;align-items:center;justify-content:center}
-.hdr-right{display:flex;gap:8px;align-items:center;justify-self:end}
-
-.hdr-search{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:7px;
-  padding:0 12px;height:34px;width:260px;transition:all .2s var(--ease)}
-.hdr-search:focus-within{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft);width:300px}
-.hdr-search input{background:none;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:12px;flex:1;min-width:0;letter-spacing:.3px}
-.hdr-search input::placeholder{color:var(--dim)}
-.hdr-search iconify-icon{color:var(--red);opacity:.7}
-.hdr-kbd{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--muted);letter-spacing:1px;
-  padding:2px 5px;border:1px solid var(--line);border-radius:3px;background:var(--bg-3)}
-
-/* HDR STATS */
-.hdr-stats{display:flex;align-items:center;height:38px;padding:0 2px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px}
-.hs-item{padding:0 12px;display:flex;gap:6px;align-items:center;height:100%;position:relative}
-.hs-item:not(:last-child)::after{content:'';position:absolute;right:0;top:28%;bottom:28%;width:1px;background:var(--line)}
-.hs-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;font-weight:600}
-.hs-val{font-family:var(--mono);font-size:11.5px;color:var(--text);font-weight:700;letter-spacing:.2px}
-.hs-live{padding:0 12px;display:flex;align-items:center;gap:7px;color:var(--red);font-weight:700;letter-spacing:1.5px;font-size:10px;text-transform:uppercase;position:relative}
-.hs-live::before{content:'';position:absolute;left:0;top:28%;bottom:28%;width:1px;background:var(--line)}
-
-/* BUTTONS */
-.btn{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;
-  padding:8px 14px;border:1px solid var(--line);border-radius:6px;cursor:pointer;
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
-  transition:all .15s var(--ease);background:var(--surface);color:var(--text)}
-.btn:hover{border-color:var(--red);color:var(--red)}
-.btn:active{transform:translateY(1px)}
-.btn-primary{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 14px var(--red-glow)}
-.btn-primary:hover{background:var(--red-hi);border-color:var(--red-hi);color:#fff;box-shadow:0 0 20px var(--red-glow),0 0 0 3px var(--red-soft)}
-.btn-ghost{background:transparent;color:var(--muted)}
-.btn-ghost:hover{color:var(--text);background:var(--red-softer);border-color:var(--red-bdr)}
-.btn-wallet{background:var(--bg-2);border-color:var(--red-bdr);color:var(--red);font-weight:700}
-.btn-wallet:hover{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 0 14px var(--red-glow)}
-.btn-wallet.ok{background:var(--up-soft);border-color:var(--up-bdr);color:var(--up)}
-.btn-wallet.ok:hover{background:var(--up);color:#002015;box-shadow:0 0 14px rgba(0,229,160,.3)}
-.btn-sm{padding:7px 11px;font-size:11px}
-.btn-lg{padding:11px 20px;font-size:12px;font-weight:700}
-
-/* WALLET DROPDOWN */
-#wmenu{display:none;position:absolute;top:calc(100% + 8px);right:0;z-index:500;
-  min-width:220px;background:var(--bg-2);border:1px solid var(--red-bdr);border-radius:8px;
-  box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 24px var(--red-glow);
-  animation:scaleIn .14s var(--ease);overflow:hidden}
-#wmenu.open{display:block}
-.wm-addr{padding:12px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);background:var(--bg-3);letter-spacing:.5px}
-.wm-addr .wm-bal{display:block;font-size:10px;color:var(--up);font-weight:600;letter-spacing:.3px;margin-top:3px}
-.wm-item{padding:10px 14px;cursor:pointer;transition:all .12s;font-family:var(--mono);font-size:11px;font-weight:600;
-  color:var(--text);letter-spacing:.5px;display:flex;align-items:center;gap:10px}
-.wm-item iconify-icon{font-size:14px;color:var(--muted)}
-.wm-item:hover{background:var(--red-softer);color:var(--red)}
-.wm-item:hover iconify-icon{color:var(--red)}
-.wm-item.danger{color:var(--red);border-top:1px solid var(--line)}
-.wm-item.danger iconify-icon{color:var(--red)}
-.wm-item.danger:hover{background:var(--red);color:#fff}
-.wm-item.danger:hover iconify-icon{color:#fff}
-
-#nbar{display:none;background:var(--red);color:#fff;padding:8px 20px;
-  font-family:var(--mono);font-size:11.5px;font-weight:600;text-align:center;
-  letter-spacing:.4px;animation:slideIn .22s var(--ease);text-transform:uppercase}
-
-/* TICKER */
-.ticker{overflow:hidden;height:30px;background:var(--bg-2);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;position:relative}
-.ticker::before,.ticker::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
-.ticker::before{left:0;background:linear-gradient(90deg,var(--bg-2),transparent)}
-.ticker::after{right:0;background:linear-gradient(-90deg,var(--bg-2),transparent)}
-.ticker-inner{display:inline-flex;gap:22px;padding:0 14px;animation:march 42s linear infinite;
-  white-space:nowrap;font-family:var(--mono);font-size:11.5px;font-weight:500}
-.ti{display:flex;gap:6px;align-items:center}
-.ti-n{color:var(--text);letter-spacing:.5px}
-.ti-sep{color:var(--red);opacity:.4}
-
-/* 3 COLS */
-#cols-wrap{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);padding:0;min-height:0}
-.col{display:flex;flex-direction:column;background:var(--bg);min-width:0;min-height:0}
-.col-head{padding:14px 16px 10px;border-bottom:1px solid var(--line);flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg-2)}
-.col-title{display:flex;align-items:center;gap:9px;min-width:0}
-.col-ic{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.col-ic.n{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
-.col-ic.b{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-.col-ic.g{background:var(--up);box-shadow:0 0 8px var(--up)}
-.col-name{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);letter-spacing:2px;text-transform:uppercase;white-space:nowrap}
-.col-count{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.5px;padding:2px 7px;background:var(--bg-3);border:1px solid var(--line);border-radius:3px}
-.col-filters{padding:8px 12px;display:flex;gap:4px;flex-shrink:0;border-bottom:1px solid var(--line);background:var(--bg-2);overflow-x:auto}
-.col-filters::-webkit-scrollbar{height:0}
-.cf{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
-  padding:5px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;background:transparent;
-  color:var(--muted);border:1px solid transparent;transition:all .14s var(--ease)}
-.cf:hover{color:var(--text);background:var(--red-softer)}
-.cf.on{background:var(--red-soft);color:var(--red);border-color:var(--red-bdr)}
-.col-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;transition:opacity .16s}
-
-/* ROW */
-.tr{display:flex;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;
-  cursor:pointer;transition:all .14s var(--ease);position:relative;overflow:hidden}
-.tr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--red)}
-.tr.t-n::before{background:var(--cyan)}
-.tr.t-b::before{background:var(--amber)}
-.tr.t-g::before{background:var(--up)}
-.tr:hover{border-color:var(--red-bdr);background:var(--surface-hi);transform:translateX(2px)}
-.tr-em{width:38px;height:38px;flex-shrink:0;font-size:22px;border-radius:7px;background:var(--bg-3);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
-.tr-inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.tr-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.tr-name{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--text);letter-spacing:.2px}
-.tr-tk{font-family:var(--mono);font-size:10px;color:var(--red);font-weight:600}
-.tr-pct{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:-.2px}
-.tr-meta{display:flex;gap:10px;font-family:var(--mono);font-size:10px;color:var(--muted)}
-.tr-meta b{color:var(--text);font-weight:600}
-.tr-age{color:var(--dim);font-size:9.5px;letter-spacing:.5px}
-.tr-prog-row{display:flex;align-items:center;gap:8px;margin-top:2px}
-.tr-prog{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden}
-.tr-prog-f{height:100%;background:var(--amber);border-radius:99px;transition:width .5s var(--ease)}
-.tr-prog-f.full{background:var(--up)}
-.tr-prog-pct{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--amber)}
-.tr-prog-pct.full{color:var(--up)}
-
-/* TOP 10 CAROUSEL */
-#crs-wrap{padding:14px 18px 14px;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--bg)}
-.crs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.sk-kick{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:8px}
-.sk-title{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);letter-spacing:1px;text-transform:uppercase}
-.sk-title em{color:var(--red);font-style:normal}
-.crs-nav{display:flex;gap:5px}
-.c-arr{width:28px;height:28px;flex-shrink:0;border-radius:6px;background:var(--surface);border:1px solid var(--line);
-  color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.c-arr:hover:not(:disabled){background:var(--red);border-color:var(--red);color:#fff}
-.c-arr:disabled{opacity:.3;cursor:default}
-#c-vp{overflow:hidden}
-#c-trk{display:flex;gap:8px;transition:transform .4s var(--ease)}
-.ccard{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;
-  padding:10px 12px;cursor:pointer;position:relative;transition:all .18s var(--ease);overflow:hidden;
-  display:flex;flex-direction:column;gap:8px}
-.ccard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--amber)}
-.ccard[data-k="presale"]::before{background:var(--cyan)}
-.ccard[data-k="migrated"]::before{background:var(--up)}
-.ccard:hover{border-color:var(--red-bdr);background:var(--surface-hi)}
-.ccard-top{display:flex;align-items:center;gap:10px}
-.ccard-em{width:36px;height:36px;border-radius:7px;flex-shrink:0;font-size:20px;display:flex;align-items:center;justify-content:center;background:var(--bg-3);border:1px solid var(--line)}
-.ccard-inf{flex:1;min-width:0}
-.ccard-rank{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1.3px;text-transform:uppercase}
-.ccard-name{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);letter-spacing:.2px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ccard-tk{font-family:var(--mono);font-size:10px;color:var(--red);font-weight:600}
-.ccard-pct{font-family:var(--mono);font-size:13px;font-weight:700;flex-shrink:0;letter-spacing:-.3px}
-.ccard-foot{display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid var(--line)}
-.ccard-mc{display:flex;flex-direction:column;gap:2px}
-.ccard-mcl{font-family:var(--mono);font-size:8.5px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;font-weight:600}
-.ccard-mcv{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
-.ccard-vol{display:flex;flex-direction:column;gap:2px;text-align:right}
-.ccard-voll{font-family:var(--mono);font-size:8.5px;color:var(--dim);letter-spacing:1.2px;text-transform:uppercase;font-weight:600}
-.ccard-volv{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
-
-/* FOOTER */
-#footer{padding:28px 24px 22px;background:var(--bg-2);border-top:1px solid var(--line);
-  display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;flex-shrink:0}
-.foot-l{display:flex;flex-direction:column;gap:6px}
-.foot-brand{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red);letter-spacing:3px;display:flex;align-items:center;gap:8px}
-.foot-brand-dim{color:var(--muted);font-size:10px;letter-spacing:1.5px;font-weight:500}
-.foot-tagline{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.5px}
-.foot-c{display:flex;flex-direction:column;gap:8px;align-items:center}
-.foot-links{display:flex;gap:0;flex-wrap:wrap;justify-content:center}
-.foot-lnk{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--muted);cursor:pointer;
-  transition:color .14s;letter-spacing:1.2px;text-transform:uppercase;padding:4px 14px;position:relative}
-.foot-lnk:not(:last-child)::after{content:'';position:absolute;right:0;top:30%;bottom:30%;width:1px;background:var(--line)}
-.foot-lnk:hover{color:var(--red)}
-.foot-r{display:flex;gap:6px;align-items:center;justify-self:end}
-.foot-social{width:30px;height:30px;border-radius:6px;background:var(--surface);border:1px solid var(--line);color:var(--muted);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:13px}
-.foot-social:hover{color:var(--red);border-color:var(--red);background:var(--red-softer);box-shadow:0 0 10px var(--red-glow)}
-.foot-status{display:flex;align-items:center;gap:7px;padding:4px 11px;background:var(--up-soft);border:1px solid var(--up-bdr);
-  border-radius:999px;font-family:var(--mono);font-size:9.5px;color:var(--up);font-weight:700;letter-spacing:1.3px;text-transform:uppercase}
-.foot-status .dot{width:6px;height:6px;border-radius:50%;background:var(--up);animation:pulse 2.5s ease-in-out infinite}
-
-/* MODALS */
-.ov{display:none;position:fixed;inset:0;z-index:800;background:rgba(5,8,14,.78);backdrop-filter:blur(6px);
-  align-items:center;justify-content:center}
-.ov.open{display:flex;animation:slideIn .2s var(--ease)}
-.modal{background:var(--bg-2);border:1px solid var(--red-bdr);border-radius:10px;overflow:hidden;
-  animation:scaleIn .2s var(--ease);box-shadow:0 24px 60px rgba(0,0,0,.6),0 0 80px var(--red-glow)}
-.mhdr{background:var(--bg-3);border-bottom:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:relative}
-.mhdr::after{content:'';position:absolute;bottom:-1px;left:18px;right:18px;height:1px;background:linear-gradient(90deg,var(--red),transparent)}
-.mhdr-t{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:8px;letter-spacing:2px;text-transform:uppercase}
-.mcls{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:all .14s}
-.mcls:hover{background:var(--red);border-color:var(--red);color:#fff}
-.mbdy{padding:20px}
-
-/* STEP BAR */
-.step-bar{display:flex;gap:1px;margin-bottom:20px;background:var(--line);border-radius:6px;overflow:hidden}
-.step{flex:1;padding:10px 8px;text-align:center;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.3px;color:var(--dim);background:var(--bg-3);transition:all .2s;text-transform:uppercase}
-.step.on{background:var(--red);color:#fff;box-shadow:inset 0 -2px 0 #fff}
-.step.done{color:var(--up);background:var(--up-soft)}
-
-/* MODE CARDS */
-.mode-cards{display:flex;gap:10px;margin-bottom:18px}
-.mcard{flex:1;padding:18px;border-radius:8px;border:1px solid var(--line);background:var(--surface);
-  cursor:pointer;text-align:center;transition:all .18s var(--ease);position:relative;overflow:hidden}
-.mcard:hover{border-color:var(--red-bdr);background:var(--surface-hi)}
-.mcard.sel{border-color:var(--red);background:var(--red-softer);box-shadow:inset 0 0 0 1px var(--red),0 0 14px var(--red-glow)}
-.mcard.sel::after{content:'✓';position:absolute;top:8px;right:12px;color:var(--red);font-size:16px;font-weight:700}
-.mic{margin-bottom:10px;display:flex;justify-content:center}
-.mn2{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--red);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase}
-.md{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;letter-spacing:.2px}
-
-/* FORM */
-.fstit{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--red);margin:18px 0 10px;display:flex;align-items:center;gap:10px;text-transform:uppercase}
-.fstit::after{content:'';flex:1;height:1px;background:var(--line)}
-.frow{display:flex;gap:10px}
-.ff{flex:1;display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
-.fl{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
-.fi,.fsel,.fta{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--bg);border:1px solid var(--line);
-  padding:10px 12px;border-radius:6px;outline:none;width:100%;transition:all .15s;letter-spacing:.3px}
-.fi:focus,.fsel:focus,.fta:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
-.fta{resize:vertical;min-height:64px}
-.fhnt{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.3px}
-.fsel option{background:var(--bg)}
-.igrid{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;margin-bottom:14px}
-.igr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px}
-.igk{color:var(--muted);letter-spacing:.3px}
-.igv{color:var(--text);font-weight:600}
-.igv.red{color:var(--red)}
-.mft{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
-.ban-toggle{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--line);padding:12px 14px;border-radius:6px;cursor:pointer;transition:all .15s}
-.ban-toggle:hover{border-color:var(--red-bdr)}
-.ban-l{display:flex;align-items:center;gap:11px}
-.ban-title{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);letter-spacing:.5px;text-transform:uppercase}
-.ban-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.3px}
-#ban-arr{transition:transform .22s var(--ease)}
-.ban-body{display:none;margin-top:6px}
-.ban-body.open{display:block;animation:slideIn .22s}
-.ban-drop{border:1px dashed var(--red-bdr);padding:22px;text-align:center;cursor:pointer;border-radius:6px;background:var(--bg);transition:all .15s}
-.ban-drop:hover{border-color:var(--red);background:var(--red-softer)}
-.ban-drop-t{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);margin:8px 0 5px;letter-spacing:1px;text-transform:uppercase}
-.ban-drop-h{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8;letter-spacing:.3px}
-
-/* PREVIEW */
-.prev-card{background:var(--surface);border:1px solid var(--red-bdr);border-radius:8px;overflow:hidden;max-width:320px;margin:0 auto 14px;box-shadow:0 0 20px var(--red-glow)}
-.prev-img{width:100%;height:130px;font-size:72px;background:var(--bg-3);display:flex;align-items:center;justify-content:center}
-.prev-body{padding:14px 16px}
-.prev-name{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);letter-spacing:.3px}
-.prev-tk{font-family:var(--mono);font-size:11px;color:var(--red);margin-top:2px;font-weight:600}
-.prev-desc{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.6;letter-spacing:.3px}
-.prev-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
-.prev-st{text-align:center;position:relative}
-.prev-st:not(:last-child)::after{content:'';position:absolute;right:0;top:4px;bottom:4px;width:1px;background:var(--line)}
-.prev-stl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--dim);letter-spacing:1.3px;text-transform:uppercase;margin-bottom:3px}
-.prev-stv{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
-.suc-wrap{text-align:center;padding:10px 0}
-.suc-title{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:4px;margin-bottom:10px;color:var(--red);text-transform:uppercase}
-.suc-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:20px;letter-spacing:.3px;line-height:1.7}
-.live-opt{background:var(--surface);border:1px solid var(--red);border-radius:8px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .18s;text-align:left}
-.live-opt:hover{background:var(--red-softer);box-shadow:0 0 16px var(--red-glow)}
-.live-opt-top{display:flex;align-items:center;gap:12px}
-.live-opt-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);letter-spacing:1.5px;text-transform:uppercase}
-.live-opt-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.3px}
-#lfa{display:none;max-height:60vh;overflow-y:auto;padding-right:4px}
-
-/* SWAP */
-.swg{margin-bottom:10px}
-.swlb{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;margin-bottom:6px;text-transform:uppercase}
-.swr{display:flex;gap:8px;align-items:center}
-.swtk{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);background:var(--bg);border:1px solid var(--line);padding:10px 12px;border-radius:6px;width:100px;outline:none;cursor:pointer;transition:border-color .14s;letter-spacing:1px}
-.swtk:hover{border-color:var(--red-bdr)}
-.swtk option{background:var(--bg)}
-.swam{flex:1;font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red);background:var(--bg);border:1px solid var(--line);padding:10px 14px;border-radius:6px;outline:none;transition:all .14s;letter-spacing:-.3px}
-.swam:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
-.swfl{width:36px;height:36px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:14px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:all .28s var(--ease);box-shadow:0 0 14px var(--red-glow)}
-.swfl:hover{transform:rotate(180deg)}
-.swinfo{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:10px 0 14px}
-.swir{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted);padding:3px 0;letter-spacing:.3px}
-.swir span:last-child{color:var(--text);font-weight:600}
-.swrt{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:right;margin-bottom:8px;letter-spacing:.3px}
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CARPET — Every Token Deserves A Red Carpet Moment</title>
+  <meta name="description" content="Solana launchpad with fair bonding curves, permanent Meteora liquidity and buyback-and-burn funded by every sell.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/landing/landing.css">
+  <script>
+    // Old share links pointed at /?token=<mint>; the terminal now lives at /app/.
+    if (/[?&]token=/.test(location.search)) location.replace('/app/' + location.search);
+  </script>
 </head>
 <body>
-
-<div class="grid-bg"></div>
-
-<div id="shell">
-
-<!-- SIDEBAR -->
-<aside id="sb">
-  <div class="sb-top" onclick="toggleSb()">
-    <div class="logo-block">
-      <div class="logo-mark" style="background:transparent;">
-        <img src="logo.png" alt="CARPET" style="width:100%;height:100%;display:block;object-fit:contain;">
-      </div>
-      <div class="logo-text">CARPET</div>
-    </div>
-  </div>
-  <nav class="sb-nav">
-    <div class="sbi on" id="si-home" onclick="setView('home')"><div class="sbi-ico"><iconify-icon icon="solar:home-2-bold"></iconify-icon></div><div class="sbi-lbl">Home</div></div>
-    <div class="sbi" id="si-bubble" onclick="setView('bubble')"><div class="sbi-ico"><iconify-icon icon="solar:atom-bold"></iconify-icon></div><div class="sbi-lbl">Bubble Map</div></div>
-    <div class="sbi" id="si-profile" onclick="setView('profile')"><div class="sbi-ico"><iconify-icon icon="solar:user-rounded-bold"></iconify-icon></div><div class="sbi-lbl">Profile</div></div>
-  </nav>
-  <div class="sb-foot">
-    <button class="sb-btn prim" onclick="openLaunch()" title="Launch"><iconify-icon icon="solar:rocket-bold"></iconify-icon></button>
-    <button class="sb-btn" onclick="openSwap()" title="Swap"><iconify-icon icon="solar:transfer-horizontal-bold"></iconify-icon></button>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<div id="main">
-
-  <header id="hdr">
-    <div class="hdr-left">
-      <div class="hdr-search">
-        <iconify-icon icon="solar:magnifer-bold" style="font-size:13px;"></iconify-icon>
-        <input type="text" placeholder="SEARCH TOKENS..." oninput="filterSearch(this.value)">
-      </div>
-    </div>
-    <div class="hdr-mid">
-      <div class="hdr-stats">
-        <div class="hs-item"><span class="hs-lbl">Tokens</span><span class="hs-val" id="hdr-token-count">0</span></div>
-        <div class="hs-item"><span class="hs-lbl">Balance</span><span class="hs-val" id="hdr-sol">—</span></div>
-      </div>
-    </div>
-    <div class="hdr-right">
-      <button class="btn btn-ghost btn-sm" onclick="openSwap()"><iconify-icon icon="solar:transfer-horizontal-bold" style="font-size:13px;"></iconify-icon> Swap</button>
-      <button class="btn btn-primary btn-sm" onclick="openLaunch()"><iconify-icon icon="solar:rocket-bold" style="font-size:13px;"></iconify-icon> Launch</button>
-      <div style="position:relative;">
-        <button class="btn btn-wallet btn-sm" id="cbtn" onclick="walletClick(event)"><iconify-icon icon="solar:wallet-bold" style="font-size:13px;"></iconify-icon> Connect</button>
-        <div id="wmenu">
-          <div class="wm-addr">—<span class="wm-bal"></span></div>
-          <div class="wm-item" onclick="goProfile()"><iconify-icon icon="solar:user-rounded-bold"></iconify-icon> Profile</div>
-          <div class="wm-item" onclick="copyAddrUI()"><iconify-icon icon="solar:copy-bold"></iconify-icon> Copy Address</div>
-          <div class="wm-item" onclick="openSolscan()"><iconify-icon icon="solar:arrow-right-up-bold"></iconify-icon> Solscan</div>
-          <div class="wm-item danger" onclick="disconnectWalletUI()"><iconify-icon icon="solar:logout-3-bold"></iconify-icon> Disconnect</div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <div id="nbar"></div>
-
-  <div class="ticker">
-    <div class="ticker-inner">
-      <div class="ti"><span class="ti-n" style="color:var(--dim);">Loading platform tokens...</span></div>
-    </div>
+  <div class="bg" aria-hidden="true">
+    <canvas class="bg-canvas" id="bg-canvas"></canvas>
+    <div class="bg-vignette"></div>
   </div>
 
-  <!-- HOME VIEW -->
-  <div id="home-view" style="display:flex;flex-direction:column;flex:1;min-height:0;">
-    <div id="crs-wrap">
-      <div class="crs-head">
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <div class="sk-kick"><div class="live-dot"></div>TOP 10 // 24H VOLUME RANK</div>
-        </div>
-        <div class="crs-nav">
-          <button class="c-arr" id="cprev" onclick="cMove(-1)"><iconify-icon icon="solar:arrow-left-bold"></iconify-icon></button>
-          <button class="c-arr" id="cnext" onclick="cMove(1)"><iconify-icon icon="solar:arrow-right-bold"></iconify-icon></button>
-        </div>
-      </div>
-      <div id="c-vp"><div id="c-trk"></div></div>
-    </div>
+  <main class="page">
+    <header class="header">
+      <a class="logo" href="/" aria-label="CARPET home">
+        <img src="/logo.png" alt="" width="52" height="52">
+      </a>
 
-    <div id="cols-wrap">
-      <div class="col">
-        <div class="col-head"><div class="col-title"><span class="col-ic n"></span><span class="col-name">New</span></div><div class="col-count" id="cnt-new">0</div></div>
-        <div class="col-filters" id="flt-new">
-          <button class="cf on" data-col="new" data-sort="date" onclick="setColSort(this)"><iconify-icon icon="solar:bolt-bold" style="font-size:10px;"></iconify-icon> Fresh</button>
-          <button class="cf" data-col="new" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:fire-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="new" data-sort="holders" onclick="setColSort(this)"><iconify-icon icon="solar:users-group-rounded-bold" style="font-size:10px;"></iconify-icon> Holders</button>
-          <button class="cf" data-col="new" data-sort="mc" onclick="setColSort(this)"><iconify-icon icon="solar:dollar-minimalistic-bold" style="font-size:10px;"></iconify-icon> MCap</button>
-        </div>
-        <div class="col-body" id="col-new"></div>
-      </div>
-      <div class="col">
-        <div class="col-head"><div class="col-title"><span class="col-ic b"></span><span class="col-name">Almost Bonded</span></div><div class="col-count" id="cnt-bonding">0</div></div>
-        <div class="col-filters" id="flt-bonding">
-          <button class="cf on" data-col="bonding" data-sort="prog" onclick="setColSort(this)"><iconify-icon icon="solar:fire-bold" style="font-size:10px;"></iconify-icon> Progress</button>
-          <button class="cf" data-col="bonding" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:chart-2-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="bonding" data-sort="holders" onclick="setColSort(this)"><iconify-icon icon="solar:users-group-rounded-bold" style="font-size:10px;"></iconify-icon> Holders</button>
-          <button class="cf" data-col="bonding" data-sort="pct" onclick="setColSort(this)"><iconify-icon icon="solar:chart-bold" style="font-size:10px;"></iconify-icon> 24h %</button>
-        </div>
-        <div class="col-body" id="col-bonding"></div>
-      </div>
-      <div class="col">
-        <div class="col-head"><div class="col-title"><span class="col-ic g"></span><span class="col-name">Graduated</span></div><div class="col-count" id="cnt-migrated">0</div></div>
-        <div class="col-filters" id="flt-migrated">
-          <button class="cf on" data-col="migrated" data-sort="date" onclick="setColSort(this)"><iconify-icon icon="solar:clock-circle-bold" style="font-size:10px;"></iconify-icon> Recent</button>
-          <button class="cf" data-col="migrated" data-sort="mc" onclick="setColSort(this)"><iconify-icon icon="solar:dollar-minimalistic-bold" style="font-size:10px;"></iconify-icon> MCap</button>
-          <button class="cf" data-col="migrated" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:chart-2-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="migrated" data-sort="pct" onclick="setColSort(this)"><iconify-icon icon="solar:chart-bold" style="font-size:10px;"></iconify-icon> 24h %</button>
-        </div>
-        <div class="col-body" id="col-migrated"></div>
-      </div>
-    </div>
+      <nav class="nav" aria-label="Primary">
+        <a href="/" class="active" aria-current="page">Home</a>
+        <a href="/app/?launch=1">Launch</a>
+        <a href="/app/">Tokens</a>
+        <a href="/app/?view=bubble">Bubble map</a>
+      </nav>
 
-    <div id="footer">
-      <div class="foot-l">
-        <div class="foot-brand">
-          <div class="logo-mark" style="width:26px;height:26px;background:transparent;">
-            <img src="logo.png" alt="CARPET" style="width:100%;height:100%;display:block;object-fit:contain;">
-          </div>
-          CARPET <span class="foot-brand-dim">TERMINAL</span>
-        </div>
-        <div class="foot-tagline">EVERY TOKEN DESERVES A RED CARPET MOMENT</div>
-      </div>
-      <div class="foot-c">
-        <div class="foot-links">
-          <div class="foot-lnk">Privacy Policy</div>
-          <div class="foot-lnk">Terms of Service</div>
-          <div class="foot-lnk">Fees</div>
-          <div class="foot-lnk">Docs</div>
-          <div class="foot-lnk">API</div>
-        </div>
-      </div>
-      <div class="foot-r">
-        <div class="foot-status"><div class="dot"></div>MAINNET</div>
-        <a class="foot-social" href="#" title="Twitter"><iconify-icon icon="ri:twitter-x-fill"></iconify-icon></a>
-        <a class="foot-social" href="#" title="GitHub"><iconify-icon icon="ri:github-fill"></iconify-icon></a>
-        <a class="foot-social" href="#" title="Docs"><iconify-icon icon="solar:document-text-bold"></iconify-icon></a>
-      </div>
-    </div>
-  </div>
+      <a class="signin" href="/app/">Open app</a>
 
-  <!-- BUBBLE MAP VIEW -->
-   <div id="bubble-view" style="display:none;"></div>
-  
-  <!-- PROFILE VIEW -->
-  <div id="profile-view" style="display:none;flex-direction:column;padding-bottom:40px;"></div>
+      <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
 
-  <!-- TOKEN DETAIL MOUNT -->
- <div id="td-mount" style="display:none;"></div>
+    <div class="menu-overlay" id="menu-overlay" hidden></div>
+    <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile" hidden>
+      <a href="/" class="active" aria-current="page" style="--i:0">Home</a>
+      <a href="/app/?launch=1" style="--i:1">Launch</a>
+      <a href="/app/" style="--i:2">Tokens</a>
+      <a href="/app/?view=bubble" style="--i:3">Bubble map</a>
+      <a href="/app/" class="mobile-signin" style="--i:4">Open app</a>
+    </nav>
 
-</div><!-- #main -->
-</div><!-- #shell -->
+    <section class="hero">
+      <div class="trust anim" style="--d:.05s">
+        <span class="trust-ring" title="Fair bonding curve">
+          <span class="trust-inner">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20c5 0 8-3 10-8s5-8 8-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </span>
+        </span>
+        <span class="trust-ring" title="LP locked forever">
+          <span class="trust-inner">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
+          </span>
+        </span>
+        <span class="trust-ring" title="Buyback and burn">
+          <span class="trust-inner">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-3-1-6 1-9z" fill="currentColor"/></svg>
+          </span>
+        </span>
+        <span class="trust-pill">Built on Solana · Graduates to Meteora</span>
+      </div>
 
-<!-- LAUNCH MODAL -->
-<div class="ov" id="lm">
-  <div class="modal" style="width:660px;max-width:95vw;">
-    <div class="mhdr"><div class="mhdr-t"><iconify-icon icon="solar:rocket-bold" style="font-size:15px;"></iconify-icon> Create Token</div><button class="mcls" onclick="closeLaunch()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button></div>
-    <div class="mbdy">
-      <div class="step-bar"><div class="step on" id="s1">01 Mode</div><div class="step" id="s2">02 Details</div><div class="step" id="s3">03 Preview</div><div class="step" id="s4">04 Launch</div></div>
-      <div id="llobby">
-        <p style="text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:18px;letter-spacing:1px;text-transform:uppercase;">// Every token deserves a red carpet moment</p>
-        <div class="mode-cards">
-          <div class="mcard" id="mbc" onclick="selMode('bonding')">
-            <div class="mic"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:36px;color:var(--red);"></iconify-icon></div>
-            <div class="mn2">Bonding</div>
-            <div class="md">Dynamic pricing<br>24% sell tax<br>Migration at 100 SOL</div>
-          </div>
-          <div class="mcard" id="mps" onclick="selMode('presale')">
-            <div class="mic"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:36px;color:var(--red);"></iconify-icon></div>
-            <div class="mn2">Presale</div>
-            <div class="md">Equal entry<br>Community launch<br>60% buyback pool</div>
-          </div>
-        </div>
-        <div style="text-align:center;"><button class="btn btn-primary btn-lg" onclick="goStep2()">Continue <iconify-icon icon="solar:arrow-right-bold" style="font-size:12px;"></iconify-icon></button></div>
-      </div>
-      <div id="lfa"><div id="lfc"></div><div class="mft"><button class="btn btn-ghost" onclick="goStep1()"><iconify-icon icon="solar:arrow-left-bold" style="font-size:11px;"></iconify-icon> Back</button><button class="btn btn-primary" onclick="goStep3()"><iconify-icon icon="solar:eye-bold" style="font-size:11px;"></iconify-icon> Preview</button></div></div>
-      <div id="lprev">
-        <p style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;">// Review before launch</p>
-        <div class="prev-card">
-          <div class="prev-img">🎭</div>
-          <div class="prev-body">
-            <div class="prev-name" id="prev-name">Token</div>
-            <div class="prev-tk" id="prev-tk">$TK</div>
-            <div class="prev-desc" id="prev-desc">Description</div>
-            <div class="prev-stats">
-              <div class="prev-st"><div class="prev-stl">Mode</div><div class="prev-stv" id="prev-mode">Bonding</div></div>
-              <div class="prev-st"><div class="prev-stl">Fee</div><div class="prev-stv up-c">Free</div></div>
-              <div class="prev-st"><div class="prev-stl">Max</div><div class="prev-stv">1%</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="mft"><button class="btn btn-ghost" onclick="goStep2b()"><iconify-icon icon="solar:arrow-left-bold" style="font-size:11px;"></iconify-icon> Edit</button><button class="btn btn-primary" onclick="doLaunch()"><iconify-icon icon="solar:rocket-bold" style="font-size:11px;"></iconify-icon> Launch</button></div>
-      </div>
-      <div id="lsuccess"><div class="suc-wrap">
-        <div style="margin-bottom:16px;"><iconify-icon icon="solar:rocket-bold-duotone" style="font-size:64px;color:var(--red);"></iconify-icon></div>
-        <div class="suc-title">Launched</div>
-        <div class="suc-sub" id="suc-sub">// Your token is live on Carpet</div>
-        <a id="suc-sig" href="#" target="_blank" style="display:block;font-family:var(--mono);font-size:10px;color:var(--cyan);margin-bottom:12px;letter-spacing:.5px;">View on Solscan →</a>
-        <button class="btn btn-ghost" style="width:100%;margin-top:6px;" onclick="closeLaunch()">Close</button>
-      </div></div>
-    </div>
-  </div>
-</div>
+      <h1 class="headline anim-static">
+        <span>Every Token Deserves</span>
+        <span>A <em class="accent">Red Carpet</em> Moment</span>
+      </h1>
 
-<!-- SWAP MODAL -->
-<div class="ov" id="sm">
-  <div class="modal" style="width:400px;max-width:95vw;">
-    <div class="mhdr"><div class="mhdr-t"><iconify-icon icon="solar:transfer-horizontal-bold" style="font-size:15px;"></iconify-icon> Swap</div><button class="mcls" onclick="closeSwap()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button></div>
-    <div class="mbdy">
-      <div class="swg"><div class="swlb">From</div><div class="swr"><select class="swtk" id="sft" onchange="cswap()"></select><input class="swam" id="sfa" type="number" value="1" oninput="cswap()"></div></div>
-      <div style="display:flex;justify-content:center;margin:-2px 0;position:relative;z-index:2;"><button class="swfl" onclick="flipSwap()"><iconify-icon icon="solar:arrow-down-bold"></iconify-icon></button></div>
-      <div class="swg"><div class="swlb">To</div><div class="swr"><select class="swtk" id="stt" onchange="cswap()"></select><input class="swam" id="sta" type="number" placeholder="0.00" readonly style="color:var(--up);"></div></div>
-      <div class="swrt" id="srt">Fetching quote...</div>
-      <div class="swinfo">
-        <div class="swir"><span>Network Fee</span><span id="sfee">—</span></div>
-        <div class="swir"><span>Price Impact</span><span id="spi" class="up-c">—</span></div>
-        <div class="swir"><span>Min Received</span><span id="smin">—</span></div>
-        <div class="swir"><span>Route</span><span id="srte">Jupiter</span></div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-ghost" onclick="closeSwap()">Cancel</button><button class="btn btn-primary" onclick="doSwap()"><iconify-icon icon="solar:transfer-horizontal-bold" style="font-size:12px;"></iconify-icon> Swap</button></div>
-    </div>
-  </div>
-</div>
+      <p class="subhead anim" style="--d:.28s">
+        Launch on a fair bonding curve, graduate to permanently locked Meteora liquidity,
+        and let every sell fund buyback-and-burn.
+      </p>
 
+      <div class="ctas anim-pulse" style="--d:.4s">
+        <a class="cta" href="/app/?launch=1">Launch a token</a>
+        <a class="cta-ghost" href="/app/">Explore tokens</a>
+      </div>
+    </section>
 
-<!-- EDIT TOKEN MODAL -->
-<div class="ov" id="edit-modal">
-  <div class="modal" style="width:520px;max-width:95vw;">
-    <div class="mhdr"><div class="mhdr-t"><iconify-icon icon="solar:pen-bold" style="font-size:15px;"></iconify-icon> Edit Token</div><button class="mcls" onclick="closeEditToken()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button></div>
-    <div class="mbdy">
-      <input type="hidden" id="edit-id">
-      <div class="fstit">Identity</div>
-      <div class="frow">
-        <div class="ff"><label class="fl">Name</label><input class="fi" id="edit-name" maxlength="32"></div>
+    <section class="stats" aria-label="Live protocol stats">
+      <div class="stat anim" style="--d:.5s">
+        <div class="stat-icon" aria-hidden="true">#</div>
+        <div class="stat-value" data-stat="launched" data-decimals="0">—</div>
+        <div class="stat-label">Tokens launched</div>
       </div>
-      <div class="ff"><label class="fl">Description</label><textarea class="fta" id="edit-desc"></textarea></div>
-      <div class="fstit">Update Image</div>
-      <div class="ff">
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px dashed var(--red-bdr);border-radius:6px;cursor:pointer;">
-          <iconify-icon icon="solar:upload-bold" style="font-size:18px;color:var(--red);"></iconify-icon>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">Upload new image (optional)</span>
-          <input type="file" id="edit-img" accept="image/*" style="display:none;">
-        </label>
+      <div class="stat anim" style="--d:.58s">
+        <div class="stat-icon" aria-hidden="true">$</div>
+        <div class="stat-value" data-stat="raised" data-decimals="1" data-suffix=" SOL">—</div>
+        <div class="stat-label">Raised on curves</div>
       </div>
-      <div class="fstit">Socials</div>
-      <div class="frow">
-        <div class="ff"><label class="fl">Website</label><input class="fi" id="edit-website" placeholder="https://..."></div>
-        <div class="ff"><label class="fl">Twitter</label><input class="fi" id="edit-twitter" placeholder="@handle"></div>
+      <div class="stat anim" style="--d:.66s">
+        <div class="stat-icon" aria-hidden="true">&gt;</div>
+        <div class="stat-value" data-stat="graduated" data-decimals="0">—</div>
+        <div class="stat-label">Graduated to Meteora</div>
       </div>
-      <div class="ff"><label class="fl">Telegram</label><input class="fi" id="edit-telegram" placeholder="t.me/..."></div>
-      <div class="mft"><button class="btn btn-ghost" onclick="closeEditToken()">Cancel</button><button class="btn btn-primary" onclick="saveEditToken()">Save Changes</button></div>
-    </div>
-  </div>
-</div>
+      <div class="stat anim" style="--d:.74s">
+        <div class="stat-icon" aria-hidden="true">*</div>
+        <div class="stat-value" data-target="24" data-decimals="0" data-suffix="%">—</div>
+        <div class="stat-label">Of every sell → buyback</div>
+      </div>
+    </section>
+  </main>
 
-<script type="module" src="/src/main.js"></script>
-<!-- EDIT PROFILE MODAL -->
-<div class="ov" id="epf-modal">
-  <div class="modal" style="width:540px;max-width:95vw;">
-    <div class="mhdr">
-      <div class="mhdr-t"><iconify-icon icon="solar:pen-bold" style="font-size:15px;"></iconify-icon> Edit Profile</div>
-      <button class="mcls" onclick="_app.closeEditProfile()"><iconify-icon icon="solar:close-circle-bold"></iconify-icon></button>
-    </div>
-    <div class="mbdy">
- 
-      <label class="fl" style="margin-bottom:6px;display:block;">Banner</label>
-      <div id="epf-banner-preview"
-           style="height:110px;border-radius:8px;border:1px solid var(--line);margin-bottom:14px;position:relative;overflow:hidden;cursor:pointer;"
-           onclick="document.getElementById('epf-banner-file').click()">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);opacity:0;transition:opacity .15s;"
-             onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">
-          <div style="display:flex;align-items:center;gap:8px;color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1.5px;">
-            <iconify-icon icon="solar:camera-bold" style="font-size:18px;"></iconify-icon> CHANGE BANNER
-          </div>
-        </div>
-      </div>
-      <input type="file" id="epf-banner-file" accept="image/*" style="display:none;" onchange="_app.uploadProfileBanner(this)">
- 
-      <label class="fl" style="margin-bottom:6px;display:block;">Avatar</label>
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-        <div id="epf-avatar-preview"
-             style="width:72px;height:72px;border-radius:12px;background:var(--red);display:flex;align-items:center;justify-content:center;border:3px solid var(--bg-2);box-shadow:0 0 18px var(--red-glow);overflow:hidden;flex-shrink:0;cursor:pointer;"
-             onclick="document.getElementById('epf-avatar-file').click()"></div>
-        <div>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('epf-avatar-file').click()">
-            <iconify-icon icon="solar:camera-bold" style="font-size:13px;"></iconify-icon> Upload Image
-          </button>
-          <div style="font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.5px;margin-top:4px;">Max 2MB · PNG / JPG / GIF</div>
-        </div>
-      </div>
-      <input type="file" id="epf-avatar-file" accept="image/*" style="display:none;" onchange="_app.uploadProfileAvatar(this)">
- 
-      <div class="ff">
-        <label class="fl">Username</label>
-        <input class="fi" id="epf-username" placeholder="your name" maxlength="24">
-      </div>
- 
-      <div class="ff">
-        <label class="fl">Bio</label>
-        <textarea class="fta" id="epf-bio" placeholder="Tell your story..." maxlength="280" rows="3"></textarea>
-        <div class="fhnt">Max 280 characters</div>
-      </div>
- 
-      <div class="mft">
-        <button class="btn btn-ghost" onclick="_app.closeEditProfile()">Cancel</button>
-        <button class="btn btn-primary" onclick="_app.saveProfile()">
-          <iconify-icon icon="solar:diskette-bold" style="font-size:12px;"></iconify-icon> Save
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+  <script type="module" src="/landing/landing.js"></script>
 </body>
 </html>

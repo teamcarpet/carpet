@@ -152,6 +152,15 @@ export async function signAndSendTransaction(transaction) {
   return sig;
 }
 
+export async function signMessageBase64(message) {
+  if (!_provider?.signMessage) throw new Error('This wallet cannot sign messages');
+  const out = await _provider.signMessage(new TextEncoder().encode(message), 'utf8');
+  const sig = out?.signature || out;
+  let bin = '';
+  for (const b of new Uint8Array(sig)) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
 export function getAnchorWallet() {
   if (!_provider || !_pubkey) throw new Error('Wallet not connected');
   return {

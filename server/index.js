@@ -1,46 +1,37 @@
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import { AccessToken } from 'livekit-server-sdk';
+import http from 'node:http';
+import { uploadImage, uploadMetadata, livekitToken } from './handlers.js';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Local stand-in for the Vercel Functions in api/. Vite proxies /api here
+// during `npm run dev`; in production Vercel serves api/* directly.
 
-const PORT = process.env.PORT || 3001;
-const LK_API_KEY = process.env.LIVEKIT_API_KEY || process.env.VITE_LIVEKIT_API_KEY;
-const LK_SECRET  = process.env.LIVEKIT_API_SECRET;
+const PORT = process.env.APP_SERVER_PORT || 3002;
+const routes = {
+  '/api/upload/image': uploadImage,
+  '/api/upload/metadata': uploadMetadata,
+  '/api/livekit-token': livekitToken,
+};
 
-if (!LK_API_KEY || !LK_SECRET) {
-  console.warn('[server] Warning: LIVEKIT_API_KEY or LIVEKIT_API_SECRET not set — /livekit-token will error');
-}
-
-app.post('/livekit-token', (req, res) => {
-  const { roomName, identity, isPublisher } = req.body;
-  if (!roomName || !identity) {
-    return res.status(400).json({ error: 'roomName and identity are required' });
+http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true}');
+    return;
   }
-  if (!LK_API_KEY || !LK_SECRET) {
-    return res.status(500).json({ error: 'LiveKit credentials not configured on server' });
-  }
+  const handler = routes[url.pathname];
+  if (!handler) { res.writeHead(404).end(); return; }
 
-  const at = new AccessToken(LK_API_KEY, LK_SECRET, {
-    identity,
-    ttl: '2h',
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const body = chunks.length ? Buffer.concat(chunks) : undefined;
+  const request = new Request(url, {
+    method: req.method,
+    headers: Object.entries(req.headers).filter(([, v]) => typeof v === 'string'),
+    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : body,
   });
-  at.addGrant({
-    roomJoin: true,
-    room: roomName,
-    canPublish: !!isPublisher,
-    canSubscribe: true,
-    canPublishData: true,
-  });
-
-  res.json({ token: at.toJwt() });
-});
-
-app.get('/health', (_req, res) => res.json({ ok: true }));
-
-app.listen(PORT, () => {
-  console.log(`[server] CARPET backend running on http://localhost:${PORT}`);
+  const response = await handler(request);
+  res.writeHead(response.status, Object.fromEntries(response.headers));
+  res.end(Buffer.from(await response.arrayBuffer()));
+}).listen(PORT, () => {
+  console.log(`[server] CARPET api on http://localhost:${PORT} (proxied by Vite at /api)`);
 });

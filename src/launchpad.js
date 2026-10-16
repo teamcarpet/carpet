@@ -61,6 +61,16 @@ export function getProgram(wallet = getAnchorWallet()) {
   return new Program(idl, getProvider(wallet));
 }
 
+// For account reads only — works without a connected wallet.
+export function getReadOnlyProgram() {
+  const readOnlyWallet = {
+    publicKey: PublicKey.default,
+    signTransaction: () => Promise.reject(new Error('Read-only program')),
+    signAllTransactions: () => Promise.reject(new Error('Read-only program')),
+  };
+  return new Program(idl, new AnchorProvider(getConnection(), readOnlyWallet, { commitment: 'confirmed' }));
+}
+
 export function solscanTxUrl(signature) {
   return `https://solscan.io/tx/${signature}?cluster=devnet`;
 }
@@ -73,6 +83,33 @@ function bn(value) {
   if (BN.isBN(value)) return value;
   if (typeof value === 'bigint') return new BN(value.toString());
   return new BN(String(value));
+}
+
+// Mirrors math/bonding_curve.rs + math/fees.rs so the client can set a real
+// min-out instead of 0 (which would let anyone sandwich the trade).
+const BPS = 10_000n;
+const big = (v) => BigInt(v.toString());
+
+export function quoteBuy(pool, config, lamports) {
+  const sol = big(lamports);
+  const fee = (sol * (BigInt(config.devFeeBps) + BigInt(config.platformFeeBps))) / BPS;
+  const net = sol - fee;
+  const vsr = big(pool.virtualSolReserves);
+  const vtr = big(pool.virtualTokenReserves);
+  return vtr - (vsr * vtr) / (vsr + net);
+}
+
+export function quoteSell(pool, config, tokenAmount) {
+  const tokens = big(tokenAmount);
+  const vsr = big(pool.virtualSolReserves);
+  const vtr = big(pool.virtualTokenReserves);
+  const gross = vsr - (vsr * vtr) / (vtr + tokens);
+  const cut = (bps) => (gross * BigInt(bps)) / BPS;
+  return gross - cut(config.devFeeBps) - cut(config.platformFeeBps) - cut(config.sellTaxBps);
+}
+
+export function withSlippage(amount, bps = CONFIG.slippageBps) {
+  return (big(amount) * (BPS - BigInt(bps))) / BPS;
 }
 
 function pk(value) {
@@ -233,12 +270,14 @@ export async function createLaunchpadPool(wallet, mint, { mode = 'bonding', pres
 
 // ── Bonding curve ────────────────────────────────────────────────────────
 
-export async function buyBonding(wallet, mint, solAmount, minTokensOut = 0) {
+export async function buyBonding(wallet, mint, solAmount, minTokensOut = null) {
   const program = getProgram(wallet);
   const mintPk = pk(mint);
   const poolPda = getBondingPoolPda(mintPk);
   const config = await program.account.globalConfig.fetch(getConfigPda());
   const pool = await program.account.bondingCurvePool.fetch(poolPda);
+  if (minTokensOut == null) minTokensOut = withSlippage(quoteBuy(pool, config, solAmount));
+  if (big(minTokensOut) <= 0n) throw new Error('Amount too small to receive any tokens');
   const buyerAta = await ataIx(mintPk, wallet.publicKey);
 
   return program.methods
@@ -260,12 +299,14 @@ export async function buyBonding(wallet, mint, solAmount, minTokensOut = 0) {
     .rpc();
 }
 
-export async function sellBonding(wallet, mint, tokenAmount, minSolOut = 0) {
+export async function sellBonding(wallet, mint, tokenAmount, minSolOut = null) {
   const program = getProgram(wallet);
   const mintPk = pk(mint);
   const poolPda = getBondingPoolPda(mintPk);
   const config = await program.account.globalConfig.fetch(getConfigPda());
   const pool = await program.account.bondingCurvePool.fetch(poolPda);
+  if (minSolOut == null) minSolOut = withSlippage(quoteSell(pool, config, tokenAmount));
+  if (big(minSolOut) <= 0n) throw new Error('Amount too small to receive any SOL');
   const sellerAta = await getAssociatedTokenAddress(mintPk, wallet.publicKey);
 
   return program.methods

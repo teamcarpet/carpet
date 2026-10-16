@@ -3,7 +3,7 @@ import {
   DataPacket_Kind,
 } from 'livekit-client';
 import { CONFIG } from './config.js';
-import { getPublicKey } from './wallet.js';
+import { getPublicKey, signMessageBase64 } from './wallet.js';
 import { addLive, updateLive, endLive, getActiveLives } from './platform.js';
 
 let activeRoom = null;
@@ -12,15 +12,27 @@ const chatListeners = new Set();
 
 // ── Token generation (requires server/index.js to be running) ───────────────
 
-async function getLivekitToken(roomName, identity, isPublisher) {
-  const res = await fetch(`${CONFIG.wsServerUrl.replace('ws://', 'http://').replace('wss://', 'https://')}/livekit-token`, {
+async function getLivekitToken(roomName, isPublisher) {
+  const body = { roomName, isPublisher: !!isPublisher };
+  if (isPublisher) {
+    // Server only grants publish rights to the token creator, proven by signature.
+    const message = `CARPET live: ${roomName} @ ${Date.now()}`;
+    body.wallet = getPublicKey()?.toBase58();
+    body.message = message;
+    body.signature = await signMessageBase64(message);
+  }
+  const res = await fetch(`${CONFIG.appServerUrl}/livekit-token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ roomName, identity, isPublisher }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error('Failed to get LiveKit token');
-  const { token } = await res.json();
-  return token;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to get LiveKit token');
+  return data.token;
+}
+
+function parseMessage(data) {
+  try { return JSON.parse(new TextDecoder().decode(data)); } catch { return null; }
 }
 
 // ── Broadcasting (token creator starts live) ─────────────────────────────────
@@ -28,11 +40,12 @@ async function getLivekitToken(roomName, identity, isPublisher) {
 export async function startLive({ tokenMint, tokenName, tokenTicker }) {
   const pubkey = getPublicKey();
   if (!pubkey) throw new Error('Connect wallet first');
+  if (!tokenMint) throw new Error('Live streams are tied to a token');
 
-  const roomName = `carpet-${tokenMint || Date.now()}`;
+  const roomName = `carpet-${tokenMint}`;
   const identity = pubkey.toBase58();
 
-  const token = await getLivekitToken(roomName, identity, true);
+  const token = await getLivekitToken(roomName, true);
   const room = new Room({ adaptiveStream: true, dynacast: true });
   activeRoom = room;
 
@@ -62,8 +75,8 @@ export async function startLive({ tokenMint, tokenName, tokenTicker }) {
     window.dispatchEvent(new CustomEvent('live:viewers-update', { detail: { viewers: count } }));
   });
   room.on(RoomEvent.DataReceived, (data) => {
-    const msg = JSON.parse(new TextDecoder().decode(data));
-    if (msg.type === 'chat') chatListeners.forEach(fn => fn(msg));
+    const msg = parseMessage(data);
+    if (msg?.type === 'chat' && typeof msg.text === 'string') chatListeners.forEach(fn => fn(msg));
   });
 
   return { room, liveId: liveEntry.id };
@@ -80,17 +93,16 @@ export async function stopLive() {
 
 // ── Viewing ──────────────────────────────────────────────────────────────────
 
-export async function joinLive(roomName, videoEl, identity) {
-  const ident = identity || `viewer-${Date.now()}`;
-  const token = await getLivekitToken(roomName, ident, false);
+export async function joinLive(roomName, videoEl) {
+  const token = await getLivekitToken(roomName, false);
   const room = new Room();
 
   room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
     if (track.kind === Track.Kind.Video) track.attach(videoEl);
   });
   room.on(RoomEvent.DataReceived, (data) => {
-    const msg = JSON.parse(new TextDecoder().decode(data));
-    if (msg.type === 'chat') chatListeners.forEach(fn => fn(msg));
+    const msg = parseMessage(data);
+    if (msg?.type === 'chat' && typeof msg.text === 'string') chatListeners.forEach(fn => fn(msg));
   });
 
   await room.connect(CONFIG.livekitUrl, token);

@@ -1,6 +1,8 @@
 // localStorage-based platform data store.
 // Replace with a real API/DB backend for production multi-user deployment.
 
+import { isBase58Address, safeUrl } from './escape.js';
+
 const TOKENS_KEY  = 'carpet_tokens';
 const LIVES_KEY   = 'carpet_lives';
 const REWARDS_KEY = 'carpet_rewards';
@@ -14,7 +16,32 @@ function write(key, data) {
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
 
-export function getTokens() { return read(TOKENS_KEY); }
+// Every token passes through here before rendering, so ids/addresses that end up
+// inside onclick="..." attributes are guaranteed to be plain base58 or digits.
+const TEXT_LIMITS = { n: 32, tk: 10, desc: 500, d2: 500, twitter: 200, telegram: 200, em: 8 };
+const NUMERIC = ['mc', 'vol', 'h', 'pct', 'prog', 'ath', 'priceSol', 'decimals', 'createdAt'];
+
+function sanitizeToken(t) {
+  if (!t || typeof t !== 'object') return null;
+  const out = { ...t };
+  out.id = String(t.id ?? '');
+  if (!/^[\w]{1,64}$/.test(out.id)) return null;
+  for (const [k, max] of Object.entries(TEXT_LIMITS)) {
+    if (out[k] != null) out[k] = String(out[k]).slice(0, max);
+  }
+  for (const k of NUMERIC) if (out[k] != null) out[k] = Number(out[k]) || 0;
+  for (const k of ['mint', 'creator', 'poolAddress', 'meteoraPool']) {
+    if (out[k] != null && !isBase58Address(out[k])) delete out[k];
+  }
+  for (const k of ['imageUrl', 'metaUrl', 'website']) {
+    if (out[k] != null) out[k] = safeUrl(out[k]);
+  }
+  out.mode = out.mode === 'presale' ? 'presale' : 'bonding';
+  out.col = ['new', 'bonding', 'migrated'].includes(out.col) ? out.col : 'new';
+  return out;
+}
+
+export function getTokens() { return read(TOKENS_KEY).map(sanitizeToken).filter(Boolean); }
 
 export function getToken(id) { return getTokens().find(t => String(t.id) === String(id)) || null; }
 
@@ -86,7 +113,7 @@ function normalizeIndexedToken(existing = {}, indexed = {}) {
     n: indexed.name ?? existing.n,
     imageUrl: indexed.imageUrl ?? existing.imageUrl,
     creator: indexed.creator ?? existing.creator,
-    mode: indexed.poolType ?? existing.mode,
+    mode: (indexed.poolType ?? existing.mode) === 'presale' ? 'presale' : 'bonding',
     poolAddress: indexed.poolAddress ?? existing.poolAddress,
     meteoraPool: indexed.meteoraPool ?? existing.meteoraPool,
     isMigrated,

@@ -3,7 +3,7 @@ use anchor_lang::solana_program::{program::invoke, system_instruction};
 
 use crate::errors::LaunchpadError;
 use crate::events::ConfigUpdated;
-use crate::state::{BondingCurvePool, GlobalConfig, PresalePool, KEEPER_WALLET};
+use crate::state::{BondingCurvePool, GlobalConfig, PresalePool, KEEPER_WALLET, MAX_SELL_TAX_BPS};
 
 const CONFIG_DISCRIMINATOR_LEN: usize = 8;
 const LEGACY_CONFIG_SPACE: usize = 172;
@@ -86,7 +86,8 @@ pub fn handle_update_config(ctx: Context<UpdateConfig>, params: UpdateConfigPara
         config.platform_fee_bps = v;
     }
     if let Some(v) = params.new_sell_tax_bps {
-        require!(v <= 5000, LaunchpadError::InvalidFeeConfig);
+        // Never above the advertised 24%, so holders can't be trapped by a hike.
+        require!(v <= MAX_SELL_TAX_BPS, LaunchpadError::InvalidFeeConfig);
         config.sell_tax_bps = v;
     }
     if let Some(v) = params.new_presale_platform_fee_bps {

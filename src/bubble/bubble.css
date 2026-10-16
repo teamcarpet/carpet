@@ -307,7 +307,7 @@
 .bm-info-panel {
   pointer-events: auto;
   width: 320px;
-  background: rgba(11, 15, 24, 0.92);
+  background: rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(8px);
   border: 1px solid var(--line);
   border-radius: 12px;

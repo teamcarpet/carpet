@@ -17,7 +17,7 @@
 **Solana token launchpad with bonding curves, presale modes, and on-chain buybacks**
 
 [![Solana](https://img.shields.io/badge/Built_on-Solana-9945FF?style=flat-square&labelColor=14F195&logo=solana&logoColor=black)](https://solana.com)
-[![Anchor](https://img.shields.io/badge/Anchor-0.30-blue?style=flat-square)](https://www.anchor-lang.com/)
+[![Anchor](https://img.shields.io/badge/Anchor-0.31-blue?style=flat-square)](https://www.anchor-lang.com/)
 [![Rust](https://img.shields.io/badge/Rust-1.75+-orange?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Node](https://img.shields.io/badge/Node-18+-43853d?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -39,7 +39,7 @@ Unlike pump-and-dump platforms where 99% of tokens go to zero in hours, CARPET i
 ```
 > launch          → choose curve type, configure presale (optional)
 > bond            → trade on the bonding curve, 1% max wallet, 24% sell tax
-> migrate         → at 100 SOL raised, auto-migrate to Meteora DAMM v2
+> migrate         → at 100 SOL raised, keeper bot migrates to Meteora DAMM v2
 > buyback         → contract permanently burns or compounds via LP
 ```
 
@@ -51,8 +51,8 @@ CARPET doesn't try to be the next pump.fun. It exists because every existing lau
 
 | Problem on other launchpads | What CARPET does instead |
 | :--- | :--- |
-| **Bot snipers drain new launches in seconds** | Twitter verify-to-buy gate (planned), 1% max-wallet enforced on-chain, 3-hour token lock post-purchase |
-| **No way to reward early supporters fairly** | Two presale modes — Regular (6 rounds × 10%, 24h) and Extreme (20 rounds × 5%, ~100min). Equal entry. No whales. |
+| **Bot snipers drain new launches in seconds** | Twitter verify-to-buy gate (planned), 1% max-buy per wallet enforced on-chain, slippage-protected trades |
+| **No way to reward early supporters fairly** | Presale with a 1%-of-target cap per wallet, then a scheduled buyback-and-burn: Regular (6 × 10% every 4h) or Extreme (12 × 5% every 30 min). |
 | **Sell pressure murders tokens at 1k MC** | 24% sell tax on bonding curve, 100% routed to buyback treasury. Sellers pay for buybacks. |
 | **Fake graduations, rugged LPs** | Migration to Meteora DAMM v2 is on-chain, atomic, and irreversible. LP tokens locked to program PDA. |
 | **No yield for creators or platform** | Meteora DAMM v2 trading fees keep accruing post-migration. The program holds the LP NFT and routes accrued fees back through the buyback / platform / creator treasury structure |
@@ -173,23 +173,23 @@ Treasury accumulation does nothing on its own. The contract converts it to value
 treasury SOL  ───►  market buy on the pool  ───►  tokens to PDA  ───►  burn()
 ```
 
-Permissionless — anyone can call it. Off-chain crank bot will run it automatically post-mainnet, but the contract doesn't depend on any privileged caller.
+Executed by the configured keeper wallet (`config.keeper_wallet`), with on-chain spend caps, cooldowns, a nonzero `min_tokens_out` and burn-only output. Bonding migration is triggered by the admin or the keeper; presale migration is permissionless once the target is hit.
 
 ### Presale modes
 
-Both modes raise into the same treasury, both burn 60% of unsold supply at the end of the raise.
+Both modes raise into a single presale vault with a per-wallet cap of 1% of the target. After migration, the buyback treasury is spent in scheduled rounds that buy the token on Meteora and burn it.
 
 | Parameter | Regular | Extreme |
 | :--- | :---: | :---: |
-| Total rounds | 6 | 20 |
-| Per-round allocation | 10% supply | 5% supply |
-| Round interval | 4 hours | 5 minutes |
-| Total duration | 24 hours | ~100 minutes |
-| Equal entry per round | yes | yes |
-| Treasury burn at end | 60% | 60% |
-| Migration to Meteora | automatic | automatic |
+| Max contribution per wallet | 1% of target | 1% of target |
+| Buyback rounds | 6 | 12 |
+| Treasury spent per round | 10% | 5% |
+| Round interval | 4 hours | 30 minutes |
+| Buyback window | 24 hours | 6 hours |
+| Total treasury burned | 60% | 60% |
+| Refund if target missed | yes | yes |
 
-Equal-entry per round means whales can't snipe rounds with bigger SOL — every wallet contributes the same amount per round. The contract enforces this on-chain.
+Per-wallet caps are counted per address — they slow whales down but can't stop someone splitting funds across wallets.
 
 ---
 
@@ -289,8 +289,8 @@ Two Anchor programs, deployed as one combined program ID for simpler client inte
 
 - Token mint **must have `freeze_authority = None`** (no freezing user balances)
 - `mint_authority` revoked at end of bonding (no infinite mint)
-- 1% max-wallet check at every `buy_bonding` call (atomic, can't be sandwich-bypassed)
-- 3-hour token lock after each purchase (no instant flip)
+- 1% cumulative max-buy per wallet at every `buy_bonding` call
+- Sell tax capped at 24% in `update_config` and pinned per trade via `expected_sell_tax_bps`
 - LP NFT from Meteora migration locked to program PDA (no rug)
 
 ---

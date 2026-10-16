@@ -4,6 +4,7 @@ pub const KEEPER_WALLET: Pubkey = pubkey!("3C6H3pudeYKfMqqc68j9Gk1xXnRAvgwsJGqWH
 pub const DEFAULT_METEORA_POOL_CONFIG: Pubkey =
     pubkey!("3KLdspUofc75aaEAJdBo1o6D6cyzXJVtGB8PgpWJEiaR");
 pub const ACTIVATION_DELAY_SLOTS: u64 = 150;
+pub const MAX_SELL_TAX_BPS: u16 = 2400;
 
 #[account]
 #[derive(InitSpace)]
@@ -62,9 +63,12 @@ impl GlobalConfig {
     }
 
     pub fn allows_meteora_pool_config(&self, config: &Pubkey) -> bool {
-        self.allowed_meteora_configs
-            .iter()
-            .any(|allowed| allowed == config)
+        // Empty slots are Pubkey::default(); never treat them as a match.
+        *config != Pubkey::default()
+            && self
+                .allowed_meteora_configs
+                .iter()
+                .any(|allowed| allowed == config)
     }
 }
 
@@ -96,5 +100,6 @@ mod tests {
 
         assert!(config.allows_meteora_pool_config(&DEFAULT_METEORA_POOL_CONFIG));
         assert!(!config.allows_meteora_pool_config(&Pubkey::new_unique()));
+        assert!(!config.allows_meteora_pool_config(&Pubkey::default()));
     }
 }

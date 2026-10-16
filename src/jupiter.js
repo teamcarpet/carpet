@@ -9,13 +9,9 @@ export async function getQuote({ inputMint, outputMint, amount, slippageBps = 50
     outputMint,
     amount: String(Math.floor(amount)),
     slippageBps: String(slippageBps),
-    feeBps: String(CONFIG.platformFeeBps),
-    feeAccount: CONFIG.feeWallet || undefined,
   });
-  if (!CONFIG.feeWallet) {
-    params.delete('feeBps');
-    params.delete('feeAccount');
-  }
+  // Fee bps is declared on the quote; the receiving account goes on /swap.
+  if (CONFIG.feeWallet) params.set('platformFeeBps', String(CONFIG.platformFeeBps));
   const res = await fetch(`${API}/quote?${params}`);
   if (!res.ok) throw new Error(`Jupiter quote failed: ${await res.text()}`);
   return res.json();
@@ -30,6 +26,7 @@ export async function buildSwapTransaction(quoteResponse) {
     body: JSON.stringify({
       quoteResponse,
       userPublicKey: pubkey.toBase58(),
+      ...(CONFIG.feeWallet ? { feeAccount: CONFIG.feeWallet } : {}),
       wrapAndUnwrapSol: true,
       dynamicComputeUnitLimit: true,
       prioritizationFeeLamports: 'auto',

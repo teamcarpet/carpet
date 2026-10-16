@@ -1,3 +1,4 @@
+import { esc } from '../../escape.js';
 // src/token-detail/components/top-holders.js
 // Right-sidebar list of top token holders.
 // Reuses the already-built Helius data layer from the bubble module.
@@ -74,9 +75,9 @@ export class TopHolders {
         </div>
         <div class="td-holders-list">
           ${top.map((h, i) => `
-            <div class="td-holders-row" data-addr="${h.address}">
+            <div class="td-holders-row" data-addr="${esc(h.address)}">
               <span class="td-holders-rank">#${i + 1}</span>
-              <span class="td-holders-addr">${shorten(h.address, 4)}</span>
+              <span class="td-holders-addr">${esc(shorten(h.address, 4))}</span>
               <span class="td-holders-pct">${fmtPct(h.bps)}</span>
             </div>
           `).join('')}
