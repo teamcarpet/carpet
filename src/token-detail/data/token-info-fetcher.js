@@ -65,6 +65,8 @@ function normalizeTokenInfo(base, data) {
     vol: Number(data.volume24h ?? base.vol ?? 0),
     h: Number(data.holders ?? base.h ?? 0),
     prog,
+    // API sends epoch seconds; the UI works in milliseconds.
+    createdAt: data.createdAt ? (data.createdAt < 1e12 ? data.createdAt * 1000 : data.createdAt) : base.createdAt,
     mode: data.poolType ?? base.mode,
     isMigrated,
     col: isMigrated ? 'migrated' : prog >= 50 ? 'bonding' : (base.col || 'new'),
