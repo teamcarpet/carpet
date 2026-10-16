@@ -1,87 +1,108 @@
 // ─────────────────────────────────────────────────────────────────────────
 // CARPET indexer — entry point
 //
-// Dispatches between two modes depending on MOCK_MODE env var:
-//   - MOCK_MODE=true  → emit fake trades every N seconds (Phase 2 dev)
-//   - MOCK_MODE=false → connect to Yellowstone Geyser and stream real events
-//
-// In both modes, decoded events flow through the same `handlers/` pipeline
-// that writes to Postgres and publishes to Redis.
+//   1. apply DB migrations (idempotent)
+//   2. backfill program history from the persisted cursor (RPC)
+//   3. stream live events:
+//        INDEXER_SOURCE=grpc → Yellowstone gRPC (Shyft) — mainnet
+//        INDEXER_SOURCE=rpc  → RPC websocket logs        — any cluster
+//        INDEXER_SOURCE=auto → grpc when a Geyser endpoint is set and the
+//                              cluster is mainnet, rpc otherwise
+//      The RPC catch-up poller keeps running under both as a safety net.
+//   MOCK_MODE=true emits fake trades instead (local pipeline testing).
 // ─────────────────────────────────────────────────────────────────────────
 
 import { z } from 'zod';
 import http from 'node:http';
-import { loadEnv, logger, createRedis } from '@carpet/shared';
+import { loadEnv, logger, createRedis, runMigrations } from '@carpet/shared';
 import { sql } from '@carpet/shared/db';
 import { startMockEmitter } from './mock.js';
-import { startGeyser }      from './geyser.js';
-import { startAggregator }  from './aggregator.js';
+import { initDecoder } from './decoder.js';
+import { createDispatchContext } from './dispatch.js';
+import { startGeyser } from './geyser.js';
+import { startRpcSource } from './rpc-source.js';
+import { startMetadataRefresher } from './metadata.js';
+import { startHolderRefresher } from './holders.js';
+import { refreshAllCandles, startAggregator } from './aggregator.js';
+
+const bool = z.preprocess(v => {
+  if (typeof v === 'boolean') return v;
+  if (typeof v !== 'string') return false;
+  return ['true', '1', 'yes', 'on'].includes(v.trim().toLowerCase());
+}, z.boolean());
 
 const env = loadEnv(z.object({
-  GEYSER_ENDPOINT:  z.string().url(),
-  GEYSER_X_TOKEN:   z.string().min(1),
-  // NOTE: do NOT use z.coerce.boolean() — it treats any non-empty string as
-  // truthy, so "false" becomes true. Parse the string ourselves.
-  MOCK_MODE: z.preprocess(
-    v => {
-      if (typeof v === 'boolean') return v;
-      if (typeof v !== 'string') return false;
-      return ['true', '1', 'yes', 'on'].includes(v.trim().toLowerCase());
-    },
-    z.boolean(),
-  ).default(false),
+  INDEXER_SOURCE:   z.enum(['auto', 'rpc', 'grpc']).default('auto'),
+  GEYSER_ENDPOINT:  z.string().url().optional(),
+  GEYSER_X_TOKEN:   z.string().min(1).optional(),
+  CATCHUP_POLL_MS:  z.coerce.number().int().min(1000).default(5000),
+  MOCK_MODE:        bool.default(false),
   MOCK_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
 }));
 
-logger.info(
-  { mockMode: env.MOCK_MODE, cluster: env.SOLANA_CLUSTER, programId: env.PROGRAM_ID },
-  'Indexer starting',
-);
+const source = env.INDEXER_SOURCE === 'auto'
+  ? (env.GEYSER_ENDPOINT && env.GEYSER_X_TOKEN && env.SOLANA_CLUSTER === 'mainnet' ? 'grpc' : 'rpc')
+  : env.INDEXER_SOURCE;
 
-// Redis publisher — handlers will use this to broadcast events to the WS service.
+if (source === 'grpc' && (!env.GEYSER_ENDPOINT || !env.GEYSER_X_TOKEN)) {
+  logger.fatal('INDEXER_SOURCE=grpc needs GEYSER_ENDPOINT and GEYSER_X_TOKEN');
+  process.exit(1);
+}
+
+logger.info({ source, mock: env.MOCK_MODE, cluster: env.SOLANA_CLUSTER, programId: env.PROGRAM_ID }, 'Indexer starting');
+
 const redis = createRedis(env.REDIS_URL, 'publisher');
+let ready = false;
 
 // ── Health endpoint ──────────────────────────────────────────────────────
-// Railway pings /health to confirm the service is alive.
-// We answer 200 only if Postgres + Redis are both reachable.
 const healthServer = http.createServer(async (req, res) => {
-  if (req.url !== '/health') {
-    res.writeHead(404).end();
-    return;
-  }
+  if (req.url !== '/health') { res.writeHead(404).end(); return; }
   try {
     await sql`SELECT 1`;
     await redis.ping();
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, ts: Date.now(), mode: env.MOCK_MODE ? 'mock' : 'live' }));
+    res.end(JSON.stringify({ ok: true, ts: Date.now(), source: env.MOCK_MODE ? 'mock' : source, caughtUp: ready }));
   } catch (err) {
     logger.error({ err: (err as Error).message }, 'Health check failed');
     res.writeHead(503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: false, error: (err as Error).message }));
   }
 });
+healthServer.listen(Number(process.env.PORT ?? 3002), () => logger.info('Health endpoint ready'));
 
-const HEALTH_PORT = Number(process.env.PORT ?? 3002);
-healthServer.listen(HEALTH_PORT, () => {
-  logger.info({ port: HEALTH_PORT }, 'Health endpoint ready');
-});
+// ── Boot ─────────────────────────────────────────────────────────────────
+await runMigrations(sql, msg => logger.info(msg));
+logger.info('Database migrations applied');
 
-// ── Pick a stream source ─────────────────────────────────────────────────
 if (env.MOCK_MODE) {
   startMockEmitter({ redis, intervalMs: env.MOCK_INTERVAL_MS });
+  ready = true;
 } else {
-  startGeyser({
-    redis,
-    endpoint:  env.GEYSER_ENDPOINT,
-    xToken:    env.GEYSER_X_TOKEN,
+  if (!(await initDecoder(env.PROGRAM_ID))) {
+    logger.fatal('IDL failed to load — check IDL_PATH or bundled idl/launchpad.json');
+    process.exit(1);
+  }
+  const ctx = createDispatchContext(redis, env.SOLANA_RPC_URL);
+
+  const { caughtUp } = startRpcSource({
+    ctx,
     programId: env.PROGRAM_ID,
-    rpcUrl:    env.SOLANA_RPC_URL,
+    live: source === 'rpc',
+    pollMs: source === 'rpc' ? env.CATCHUP_POLL_MS : 60_000,
   });
+  if (source === 'grpc') {
+    startGeyser({ ctx, endpoint: env.GEYSER_ENDPOINT!, xToken: env.GEYSER_X_TOKEN!, programId: env.PROGRAM_ID });
+  }
+  startMetadataRefresher(ctx.connection);
+  startHolderRefresher(ctx.connection);
+
+  caughtUp.then(async () => {
+    ready = true;
+    // Backfilled trades sit below the aggregates' watermark — materialize them.
+    await refreshAllCandles();
+  }).catch(() => {});
 }
 
-// ── Aggregator: refresh continuous aggregates on a cron ──────────────────
-// TimescaleDB does most of the work; this just nudges the materialised views
-// when we need fresher-than-policy data (e.g. last 1 minute candle).
 startAggregator({ intervalMs: 60_000 });
 
 // ── Graceful shutdown ────────────────────────────────────────────────────

@@ -22,21 +22,22 @@ export interface ContributionEvent {
 }
 
 export async function handlePresaleContribution(evt: ContributionEvent, _redis: Redis): Promise<void> {
+  // total_raised comes straight from the event, so replaying history is safe.
+  const total = evt.totalRaisedSol ?? evt.amountSol;
   await sql`
     INSERT INTO presale_state (pool, mint, mode, total_rounds, current_round, start_time, end_time, total_raised_sol, contributors)
-    VALUES (${evt.pool}, ${evt.mint}, 0, 6, ${evt.round}, NOW(), NOW(), ${evt.amountSol}, 1)
+    VALUES (${evt.pool}, ${evt.mint}, 0, 6, ${evt.round}, NOW(), NOW(), ${total}, 0)
     ON CONFLICT (pool) DO UPDATE SET
-      total_raised_sol = presale_state.total_raised_sol + ${evt.amountSol},
-      current_round    = ${evt.round}
+      total_raised_sol = GREATEST(presale_state.total_raised_sol, ${total})
   `;
   await sql`
     UPDATE pool_state
-    SET total_raised_sol = ${evt.totalRaisedSol ?? evt.amountSol},
-        progress_pct = LEAST(100, (${evt.totalRaisedSol ?? evt.amountSol} / NULLIF(migration_target, 0)) * 100),
+    SET total_raised_sol = GREATEST(total_raised_sol, ${total}),
+        progress_pct = LEAST(100, (GREATEST(total_raised_sol, ${total}) / NULLIF(migration_target, 0)) * 100),
         last_updated = NOW()
     WHERE pool = ${evt.pool}
   `;
-  logger.debug({ amount: evt.amountSol, round: evt.round }, 'presale contribution');
+  logger.debug({ amount: evt.amountSol, total }, 'presale contribution');
 }
 
 export interface ClaimEvent {

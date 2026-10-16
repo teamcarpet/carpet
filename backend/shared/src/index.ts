@@ -8,3 +8,4 @@ export * from './redis.js';
 export * from './types.js';
 export * as schema from './db/schema.js';
 export { db, sql } from './db/client.js';
+export { runMigrations } from './db/migrate-runner.js';

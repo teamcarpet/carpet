@@ -35,8 +35,8 @@ export const candlesRoutes: FastifyPluginAsync = async (app) => {
       return { error: 'Unknown resolution' };
     }
 
-    const fromTs = from ? new Date(from * 1000) : new Date(Date.now() - 24 * 3600_000);
-    const toTs   = to   ? new Date(to * 1000)   : new Date();
+    const fromTs = from != null ? new Date(from * 1000) : new Date(Date.now() - 24 * 3600_000);
+    const toTs   = to   != null ? new Date(to * 1000)   : new Date();
     const limit  = countBack ?? 1000;
 
     // Aggregates store time as `bucket` — alias to `time` for the wire format

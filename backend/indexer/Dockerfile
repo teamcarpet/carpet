@@ -23,6 +23,7 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules               ./node_modules
 COPY --from=build /app/shared/dist                ./shared/dist
 COPY --from=build /app/shared/package.json        ./shared/package.json
+COPY --from=build /app/shared/migrations          ./shared/migrations
 COPY --from=build /app/indexer/dist               ./indexer/dist
 COPY --from=build /app/indexer/package.json       ./indexer/package.json
 COPY --from=build /app/indexer/idl                ./indexer/idl

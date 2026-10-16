@@ -10,6 +10,7 @@ export const CHANNELS = {
   CANDLE_UPDATE:   'carpet:candle',
   POOL_CREATED:    'carpet:pool-created',
   MIGRATION:       'carpet:migration',
+  BUYBACK:         'carpet:buyback',
 } as const;
 
 export type Channel = typeof CHANNELS[keyof typeof CHANNELS];

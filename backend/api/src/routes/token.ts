@@ -23,7 +23,10 @@ export const tokenRoutes: FastifyPluginAsync = async (app) => {
           t.creator, t.pool_type AS "poolType", t.pool_address AS "poolAddress",
           extract(epoch FROM t.created_at)::int AS "createdAt",
           t.is_migrated AS "isMigrated", t.meteora_pool AS "meteoraPool",
-          t.ath,
+          t.ath, t.holders, t.supply,
+          t.description, t.website, t.twitter, t.telegram,
+          ps.total_raised_sol AS "raisedSol",
+          ps.migration_target AS "migrationTarget",
           ps.price_sol AS "priceSol",
           ps.price_usd AS "priceUsd",
           ps.market_cap AS "marketCap",
@@ -36,8 +39,7 @@ export const tokenRoutes: FastifyPluginAsync = async (app) => {
       vol24 AS (
         SELECT
           coalesce(sum(amount_sol), 0)::float8 AS "volume24h",
-          count(*)::int AS trades24h,
-          count(DISTINCT account)::int AS holders
+          count(*)::int AS "trades24h"
         FROM trades
         WHERE mint = ${mint}
           AND timestamp > NOW() - INTERVAL '24 hours'
@@ -50,7 +52,7 @@ export const tokenRoutes: FastifyPluginAsync = async (app) => {
       SELECT
         latest.*,
         coalesce(vol24."volume24h", 0)  AS "volume24h",
-        coalesce(vol24.holders, 0)      AS holders,
+        vol24."trades24h",
         CASE
           WHEN pct24.price_24h_ago IS NULL OR pct24.price_24h_ago = 0 THEN 0
           ELSE ((pct24.price_now - pct24.price_24h_ago) / pct24.price_24h_ago * 100)::float8

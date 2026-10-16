@@ -1,7 +1,6 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import 'dotenv/config';
+import { runMigrations } from './migrate-runner.js';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -9,12 +8,9 @@ if (!url) {
   process.exit(1);
 }
 
-const sql = postgres(url, { max: 1 });
-const db = drizzle(sql);
-
+const sql = postgres(url, { max: 1, onnotice: () => {} });
 console.log('Running migrations…');
-await migrate(db, { migrationsFolder: './migrations' });
+await runMigrations(sql);
 console.log('✓ Migrations applied');
-
 await sql.end();
 process.exit(0);

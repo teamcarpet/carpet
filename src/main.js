@@ -646,9 +646,14 @@ function handleDeepLink() {
   const params = new URLSearchParams(location.search);
   const mint = params.get('token');
   if (mint) {
+    // Open straight away — the detail page reads everything it needs from the
+    // chain, so a share link shouldn't wait for the feed to load.
+    if (!getTokens().some(t => t.mint === mint)) {
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) { showN('Invalid token link'); return; }
+      mergeIndexedTokens([{ mint, ticker: mint.slice(0, 4).toUpperCase(), name: `Token ${mint.slice(0, 6)}` }]);
+    }
     const token = getTokens().find(t => t.mint === mint);
     if (token) openDet(token.id);
-    else showN('Token not found yet — it may still be indexing');
   } else if (params.get('launch') === '1') {
     openLaunch();
   } else if (params.get('view') === 'bubble') {
@@ -659,7 +664,8 @@ function handleDeepLink() {
 export function init() {
   renderAll();
   refreshTicker();
-  syncIndexedTokens().then(handleDeepLink);
+  handleDeepLink();
+  syncIndexedTokens();
   setInterval(syncIndexedTokens, INDEX_SYNC_MS);
   const netBadge = document.getElementById('net-badge');
   if (netBadge) netBadge.textContent = CONFIG.LAUNCHPAD.cluster.toUpperCase();

@@ -105,7 +105,12 @@ export class TradesTable {
     });
   }
 
+  // Trades arrive from the indexer WS and straight from the chain (LivePulse);
+  // the same signature can show up twice.
+  pushTrade(trade) { this._onTrade(trade); }
+
   _onTrade(trade) {
+    if (trade.signature && this.rows.some(r => r.signature === trade.signature)) return;
     this.rows.unshift(trade);
     if (this.rows.length > MAX_ROWS) this.rows.length = MAX_ROWS;
     this._renderBody();
@@ -122,11 +127,12 @@ export class TradesTable {
   }
 
   _renderRow(r) {
-    const sideCls = r.type === 'buy' ? 'up' : 'dn';
+    const side = r.type ?? r.side;
+    const sideCls = side === 'buy' ? 'up' : 'dn';
     return `
       <div class="td-trades-row">
         <div class="td-trades-addr">${esc(shorten(r.account, 5))}</div>
-        <div class="td-trades-side ${sideCls}">${esc(r.type?.toUpperCase() || '—')}</div>
+        <div class="td-trades-side ${sideCls}">${esc(side?.toUpperCase() || '—')}</div>
         <div>${fmtSol(r.amountSol)}</div>
         <div>${fmtToken(r.amountToken)}</div>
         <div class="td-trades-time" data-ts="${esc(r.timestamp || '')}">${fmtAgo(r.timestamp)}</div>

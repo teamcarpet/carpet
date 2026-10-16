@@ -10,12 +10,9 @@
 // attaches listeners, runs fetchers. On unmount it cleans everything up.
 
 import { Header }          from './components/header.js';
-import { MarketCard }      from './components/market-card.js';
-import { ChartToolbar }    from './components/chart-toolbar.js';
-import { ChartEmbed }      from './components/chart-embed.js';
+import { LivePulse }       from './components/live-pulse.js';
 import { TradesTable }     from './components/trades-table.js';
 import { TradePanel }      from './components/trade-panel.js';
-import { BondingProgress } from './components/bonding-progress.js';
 import { TopHolders }      from './components/top-holders.js';
 import { ChatPanel }       from './components/chat-panel.js';
 import { MobileCta }       from './components/mobile-cta.js';
@@ -43,14 +40,11 @@ class TokenDetailView {
       </div>
       <div class="td-layout">
         <div class="td-center">
-          <div id="td-market-slot"></div>
-          <div id="td-toolbar-slot"></div>
-          <div id="td-chart-slot"></div>
+          <div id="td-pulse-slot"></div>
           <div id="td-trades-slot"></div>
         </div>
         <aside class="td-right">
           <div id="td-trade-slot"></div>
-          <div id="td-bonding-slot"></div>
           <div id="td-chat-slot"></div>
           <div id="td-holders-slot"></div>
         </aside>
@@ -64,19 +58,16 @@ class TokenDetailView {
     // Mount subcomponents into their slots.
     this.components.push(
       this.header    = new Header(document.getElementById('td-header-slot'),    { mint: this.mint }),
-      this.market    = new MarketCard(document.getElementById('td-market-slot'),{ mint: this.mint }),
-      this.toolbar   = new ChartToolbar(document.getElementById('td-toolbar-slot')),
-      this.chart     = new ChartEmbed(document.getElementById('td-chart-slot'), { mint: this.mint }),
       this.trades    = new TradesTable(document.getElementById('td-trades-slot'),{ mint: this.mint }),
+      // No candles: one live number that moves with every confirmed trade.
+      this.pulse     = new LivePulse(document.getElementById('td-pulse-slot'), {
+        mint: this.mint,
+        onTrade: (t) => this.trades.pushTrade(t),
+      }),
       this.trade     = new TradePanel(document.getElementById('td-trade-slot'), { mint: this.mint, onTrade: this.onTrade }),
-      this.bonding   = new BondingProgress(document.getElementById('td-bonding-slot'),{ mint: this.mint }),
       this.chat      = new ChatPanel(document.getElementById('td-chat-slot'),   { mint: this.mint }),
       this.holders   = new TopHolders(document.getElementById('td-holders-slot'),{ mint: this.mint }),
     );
-
-    // Wire toolbar → chart: changing resolution/mode pushes into chart.
-    this.toolbar.on('resolutionChange', (res) => this.chart.setResolution(res));
-    this.toolbar.on('priceModeChange',  (mode) => this.chart.setPriceMode(mode));
 
     // Mobile: attach fixed bottom CTA + sheet. Does nothing on desktop (CSS gates it).
     this.mobileCta = new MobileCta({ tradePanel: this.trade });
@@ -89,9 +80,6 @@ class TokenDetailView {
       if (!info) return;
       // Fan out to components that depend on token metadata.
       this.header.setInfo(info);
-      this.market.setInfo(info);
-      this.chart.setInfo(info);
-      this.bonding.setInfo(info);
       this.trade.setInfo(info);
     } catch (err) {
       console.warn('[token-detail] fetchTokenInfo failed', err);

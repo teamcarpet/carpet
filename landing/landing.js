@@ -210,9 +210,17 @@ function countUp(el, target, i) {
   }, 480 + i * 90);
 }
 
+// Indexer first (one cheap request); fall back to reading the program.
+async function loadStatsFromApi() {
+  const res = await fetch(`${CONFIG.apiUrl}/stats`);
+  if (!res.ok) throw new Error(`stats ${res.status}`);
+  const s = await res.json();
+  return { launched: s.launched, raised: s.raisedSol, graduated: s.graduated };
+}
+
 function setupStats() {
   const els = [...document.querySelectorAll('.stat-value')];
-  const statsPromise = loadStats().catch((err) => {
+  const statsPromise = loadStatsFromApi().catch(() => loadStats()).catch((err) => {
     console.warn('[landing] stats unavailable', err);
     return null;
   });

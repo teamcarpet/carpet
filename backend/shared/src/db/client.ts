@@ -23,6 +23,7 @@ export const sql = postgres(url, {
   idle_timeout: 20,
   connect_timeout: 10,
   transform: { undefined: null },
+  onnotice: () => {},   // idempotent DDL ("already exists, skipping") is expected
 });
 
 export const db = drizzle(sql, { schema });

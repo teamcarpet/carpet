@@ -47,14 +47,13 @@ export const tokensRoutes: FastifyPluginAsync = async (app) => {
         coalesce(ps.market_cap,   0)  AS "marketCap",
         coalesce(ps.progress_pct, 0)  AS prog,
         coalesce(v."volume24h",   0)  AS "volume24h",
-        coalesce(v.holders,       0)  AS holders,
+        t.holders                     AS holders,
         coalesce(p."pctChange24h", 0) AS "pctChange24h"
       FROM tokens t
       LEFT JOIN pool_state ps ON ps.mint = t.mint
       LEFT JOIN LATERAL (
         SELECT
-          sum(amount_sol)::float8         AS "volume24h",
-          count(DISTINCT account)::int    AS holders
+          sum(amount_sol)::float8         AS "volume24h"
         FROM trades
         WHERE mint = t.mint AND timestamp > NOW() - INTERVAL '24 hours'
       ) v ON true
