@@ -66,7 +66,7 @@ The thesis: **a launchpad should make every actor better off** — creators, tra
 
 ```yaml
 network:           devnet (mainnet: pending audit)
-program_id:        DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV
+program_id:        2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s
 test_tokens:       3 deployed on devnet
 last_updated:      2026-04-25
 ```

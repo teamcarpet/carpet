@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
-use anchor_spl::token::{self, Mint, SyncNative, Token, TokenAccount};
+use anchor_spl::token::{self, Burn, Mint, SyncNative, Token, TokenAccount};
 use anchor_spl::token_2022::spl_token_2022::{
     extension::StateWithExtensions, state::Account as Token2022Account,
 };
@@ -16,8 +16,9 @@ use crate::state::{BondingCurvePool, BuybackState, GlobalConfig, ACTIVATION_DELA
 
 #[derive(Accounts)]
 pub struct MigrateBonding<'info> {
-    /// C-6: Admin or the configured keeper can trigger migration, so the
-    /// keeper bot keeps migrations live without holding the admin key.
+    /// Anyone can migrate once the target is reached (same as presale), so a
+    /// pool at its target never depends on a single keeper staying online.
+    /// Every account below is validated, and the LP lands in program custody.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -25,8 +26,6 @@ pub struct MigrateBonding<'info> {
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
         constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
-        constraint = config.admin == payer.key() || config.keeper_wallet == payer.key()
-            @ LaunchpadError::UnauthorizedAdmin,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -167,8 +166,10 @@ pub struct MigrateBonding<'info> {
     )]
     pub wsol_mint: UncheckedAccount<'info>,
 
-    /// H-4: Actual token mint (for Meteora pool creation + buyback vault init)
+    /// H-4: Actual token mint (for Meteora pool creation + buyback vault init).
+    /// Mutable so tokens above the price-matched LP amount can be burned.
     #[account(
+        mut,
         constraint = token_mint.key() == pool.mint @ LaunchpadError::InvalidPoolParams
     )]
     #[account(
@@ -212,13 +213,20 @@ pub fn handle_migrate_bonding(ctx: Context<MigrateBonding>) -> Result<()> {
     );
 
     // ── CALCULATE SPLITS ────────────────────────────────────────────
-    let (migration_fee, liquidity_sol, buyback_sol, liquidity_tokens) =
+    let (migration_fee, liquidity_sol, buyback_sol, remaining_tokens) =
         calculate_bonding_migration_split(
             pool.real_sol_reserves,
             config.migration_fee_bps,
             pool.buyback_treasury,
             pool.real_token_reserves,
         )?;
+    // Open the Meteora pool at the curve's last price; burn what's left over.
+    let (liquidity_tokens, burn_tokens) = price_matched_liquidity_tokens(
+        liquidity_sol,
+        pool.virtual_sol_reserves,
+        pool.virtual_token_reserves,
+        remaining_tokens,
+    )?;
 
     // Calculate Meteora init price/liquidity from actual deposited amounts.
     let sqrt_price = cpi_meteora::calculate_init_sqrt_price(liquidity_sol, liquidity_tokens)?;
@@ -309,10 +317,27 @@ pub fn handle_migrate_bonding(ctx: Context<MigrateBonding>) -> Result<()> {
         ))?;
     }
 
-    // 3. Transfer liquidity tokens from token_vault to payer's token account
+    let pool_signer_seeds: &[&[&[u8]]] =
+        &[&[BondingCurvePool::SEED, mint_key.as_ref(), &[pool_bump]]];
+
+    // 3a. Burn the tokens that would price the pool below the curve.
+    if burn_tokens > 0 {
+        token::burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Burn {
+                    mint: ctx.accounts.token_mint.to_account_info(),
+                    from: ctx.accounts.token_vault.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                pool_signer_seeds,
+            ),
+            burn_tokens,
+        )?;
+    }
+
+    // 3b. Transfer liquidity tokens from token_vault to payer's token account
     if liquidity_tokens > 0 {
-        let pool_signer_seeds: &[&[&[u8]]] =
-            &[&[BondingCurvePool::SEED, mint_key.as_ref(), &[pool_bump]]];
 
         anchor_spl::token::transfer(
             CpiContext::new_with_signer(
@@ -426,6 +451,33 @@ fn calculate_bonding_migration_split(
     let liquidity_tokens = remaining_tokens;
 
     Ok((migration_fee, liquidity_sol, buyback_sol, liquidity_tokens))
+}
+
+/// LP tokens that make the Meteora opening price equal the curve's final
+/// marginal price (virtual_sol / virtual_tokens):
+///   lp_tokens = liquidity_sol × virtual_tokens / virtual_sol
+/// Seeding all remaining tokens instead would open the pool ~38% below the
+/// last curve price (80 SOL against the tokens priced by 130 virtual SOL).
+/// Returns (lp_tokens, tokens_to_burn).
+fn price_matched_liquidity_tokens(
+    liquidity_sol: u64,
+    virtual_sol: u64,
+    virtual_tokens: u64,
+    remaining_tokens: u64,
+) -> Result<(u64, u64)> {
+    require!(virtual_sol > 0, LaunchpadError::DivisionByZero);
+    let lp: u128 = (liquidity_sol as u128)
+        .checked_mul(virtual_tokens as u128)
+        .ok_or(LaunchpadError::MathOverflow)?
+        .checked_div(virtual_sol as u128)
+        .ok_or(LaunchpadError::DivisionByZero)?;
+    let lp = u64::try_from(lp)
+        .map_err(|_| LaunchpadError::CastOverflow)?
+        .min(remaining_tokens);
+    let burn = remaining_tokens
+        .checked_sub(lp)
+        .ok_or(LaunchpadError::MathUnderflow)?;
+    Ok((lp, burn))
 }
 
 fn delayed_activation_slot(current_slot: u64) -> Result<u64> {
@@ -552,6 +604,24 @@ mod tests {
             calculate_bonding_migration_split(real_sol, 100, treasury, 1).unwrap();
         assert_eq!(fee + liquidity + buyback, vault);
         assert!(buyback >= treasury);
+    }
+
+    #[test]
+    fn graduation_price_matches_curve_end() {
+        // Default curve: 30 virtual SOL, 1B tokens, 100 SOL raised, no sells.
+        let supply: u64 = 1_000_000_000_000_000;
+        let vsr: u64 = 130_000_000_000;
+        let vtr: u64 = ((30_000_000_000u128 * supply as u128) / vsr as u128) as u64;
+        let liquidity_sol: u64 = 80_000_000_000;
+        let (lp, burn) = price_matched_liquidity_tokens(liquidity_sol, vsr, vtr, vtr).unwrap();
+        assert_eq!(lp + burn, vtr);
+        // Pool price (liquidity_sol / lp) equals curve price (vsr / vtr) within rounding.
+        let pool_px = liquidity_sol as f64 / lp as f64;
+        let curve_px = vsr as f64 / vtr as f64;
+        assert!((pool_px / curve_px - 1.0).abs() < 1e-9);
+        // ≈ 88.76M tokens burned, ≈ 142.01M seeded.
+        assert_eq!(burn / 1_000_000_000_000, 88);
+        assert_eq!(lp / 1_000_000_000_000, 142);
     }
 
     #[test]

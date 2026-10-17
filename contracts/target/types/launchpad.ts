@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/launchpad.json`.
  */
 export type Launchpad = {
-  "address": "DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV",
+  "address": "2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s",
   "metadata": {
     "name": "launchpad",
     "version": "0.1.0",
@@ -1683,7 +1683,9 @@ export type Launchpad = {
         {
           "name": "payer",
           "docs": [
-            "C-6: Only admin can trigger migration"
+            "Anyone can migrate once the target is reached (same as presale), so a",
+            "pool at its target never depends on a single keeper staying online.",
+            "Every account below is validated, and the LP lands in program custody."
           ],
           "writable": true,
           "signer": true
@@ -1972,8 +1974,10 @@ export type Launchpad = {
         {
           "name": "tokenMint",
           "docs": [
-            "H-4: Actual token mint (for Meteora pool creation + buyback vault init)"
-          ]
+            "H-4: Actual token mint (for Meteora pool creation + buyback vault init).",
+            "Mutable so tokens above the price-matched LP amount can be burned."
+          ],
+          "writable": true
         },
         {
           "name": "payerWsolAccount",
@@ -2320,8 +2324,10 @@ export type Launchpad = {
         {
           "name": "tokenMint",
           "docs": [
-            "H-4: Token mint for Meteora + buyback vault init"
-          ]
+            "H-4: Token mint for Meteora + buyback vault init. Mutable so the part of",
+            "the LP reserve above the presale price can be burned."
+          ],
+          "writable": true
         },
         {
           "name": "payerWsolAccount",

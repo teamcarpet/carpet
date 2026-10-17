@@ -8,7 +8,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 
 const env = (k, d) => process.env[k] || d;
 const PINATA_GATEWAY = () => env('PINATA_GATEWAY', 'https://gateway.pinata.cloud');
-const PROGRAM_ID = () => new PublicKey(env('PROGRAM_ID', 'DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV'));
+const PROGRAM_ID = () => new PublicKey(env('PROGRAM_ID', '2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s'));
 
 // Vercel caps request bodies at 4.5 MB.
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;

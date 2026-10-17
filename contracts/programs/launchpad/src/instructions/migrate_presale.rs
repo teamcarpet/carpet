@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::{get_associated_token_address, AssociatedToken};
-use anchor_spl::token::{self, Mint, SyncNative, Token, TokenAccount};
+use anchor_spl::token::{self, Burn, Mint, SyncNative, Token, TokenAccount};
 use anchor_spl::token_2022::spl_token_2022::{
     extension::StateWithExtensions, state::Account as Token2022Account,
 };
@@ -171,8 +171,9 @@ pub struct MigratePresale<'info> {
     )]
     pub wsol_mint: UncheckedAccount<'info>,
 
-    /// H-4: Token mint for Meteora + buyback vault init
-    #[account(constraint = token_mint.key() == pool.mint @ LaunchpadError::InvalidPoolParams)]
+    /// H-4: Token mint for Meteora + buyback vault init. Mutable so the part of
+    /// the LP reserve above the presale price can be burned.
+    #[account(mut, constraint = token_mint.key() == pool.mint @ LaunchpadError::InvalidPoolParams)]
     #[account(
         constraint = token_mint.freeze_authority.is_none() @ LaunchpadError::MintFreezable,
         constraint = token_mint.mint_authority.is_none() @ LaunchpadError::UnsafeMintAuthority,
@@ -224,9 +225,16 @@ pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
 
     let (migration_fee, liquidity_sol, creator_sol, buyback_sol) =
         calculate_presale_sol_split(total_sol, config.migration_fee_bps)?;
-    // Tokens for liquidity: 20% of total supply
-    let liquidity_tokens = fees::apply_bps(pool.total_token_supply, 2000)?;
+    // 20% of supply is reserved for liquidity, but only enough of it is seeded
+    // to open the pool at the price contributors paid; the rest is burned.
+    let lp_reserve_tokens = fees::apply_bps(pool.total_token_supply, 2000)?;
     let creator_token_allocation = fees::apply_bps(pool.total_token_supply, pool.creator_pool_bps)?;
+    let (liquidity_tokens, burn_tokens) = presale_price_matched_liquidity(
+        liquidity_sol,
+        total_sol,
+        distributable_tokens(pool.total_token_supply, pool.creator_pool_bps)?,
+        lp_reserve_tokens,
+    )?;
 
     let sqrt_price = cpi_meteora::calculate_init_sqrt_price(liquidity_sol, liquidity_tokens)?;
     let initial_liquidity =
@@ -239,6 +247,8 @@ pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
 
     // ── EFFECTS ─────────────────────────────────────────────────────
     ctx.accounts.pool.is_migrated = true;
+    // From here on end_time marks graduation: creator tokens vest from it.
+    ctx.accounts.pool.end_time = Clock::get()?.unix_timestamp;
 
     let mode = ctx.accounts.pool.presale_mode;
     ctx.accounts.buyback_state.pool = pool_key;
@@ -327,10 +337,27 @@ pub fn handle_migrate_presale(ctx: Context<MigratePresale>) -> Result<()> {
         ))?;
     }
 
-    // 4. Liquidity tokens → payer token account
+    let pool_signer_seeds: &[&[&[u8]]] =
+        &[&[PresalePool::SEED, pool_mint.as_ref(), &[pool_bump]]];
+
+    // 4a. Burn the part of the LP reserve that would underprice the pool.
+    if burn_tokens > 0 {
+        token::burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Burn {
+                    mint: ctx.accounts.token_mint.to_account_info(),
+                    from: ctx.accounts.token_vault.to_account_info(),
+                    authority: ctx.accounts.pool.to_account_info(),
+                },
+                pool_signer_seeds,
+            ),
+            burn_tokens,
+        )?;
+    }
+
+    // 4b. Liquidity tokens → payer token account
     if liquidity_tokens > 0 {
-        let pool_signer_seeds: &[&[&[u8]]] =
-            &[&[PresalePool::SEED, pool_mint.as_ref(), &[pool_bump]]];
 
         anchor_spl::token::transfer(
             CpiContext::new_with_signer(
@@ -430,6 +457,45 @@ fn calculate_presale_sol_split(
     Ok((migration_fee, liquidity_sol, creator_sol, buyback_sol))
 }
 
+/// Tokens split pro-rata between contributors: supply minus the creator
+/// allocation and the 20% liquidity reserve. Same formula as claim_presale.
+pub fn distributable_tokens(total_supply: u64, creator_pool_bps: u16) -> Result<u64> {
+    let bps = 10_000u64
+        .checked_sub(creator_pool_bps as u64)
+        .ok_or(LaunchpadError::MathUnderflow)?
+        .checked_sub(2000)
+        .ok_or(LaunchpadError::MathUnderflow)?;
+    let v = (total_supply as u128)
+        .checked_mul(bps as u128)
+        .ok_or(LaunchpadError::MathOverflow)?
+        / 10_000u128;
+    u64::try_from(v).map_err(|_| LaunchpadError::CastOverflow.into())
+}
+
+/// Contributors paid total_sol for distributable tokens, so the presale
+/// price is total_sol / distributable. Seeding the pool at that price:
+///   lp_tokens = liquidity_sol × distributable / total_sol
+/// Seeding the whole 20% reserve instead would open 40% below what
+/// contributors paid (at the default 20% creator allocation).
+/// Returns (lp_tokens, tokens_to_burn).
+fn presale_price_matched_liquidity(
+    liquidity_sol: u64,
+    total_sol: u64,
+    distributable: u64,
+    lp_reserve: u64,
+) -> Result<(u64, u64)> {
+    require!(total_sol > 0, LaunchpadError::ZeroAmount);
+    let lp = (liquidity_sol as u128)
+        .checked_mul(distributable as u128)
+        .ok_or(LaunchpadError::MathOverflow)?
+        / total_sol as u128;
+    let lp = u64::try_from(lp)
+        .map_err(|_| LaunchpadError::CastOverflow)?
+        .min(lp_reserve);
+    let burn = lp_reserve.checked_sub(lp).ok_or(LaunchpadError::MathUnderflow)?;
+    Ok((lp, burn))
+}
+
 fn presale_can_migrate_permissionlessly(current_raised: u64, migration_target: u64) -> bool {
     current_raised >= migration_target
 }
@@ -526,6 +592,21 @@ mod tests {
         assert!(!presale_can_migrate_permissionlessly(99, 100));
         assert!(presale_can_migrate_permissionlessly(100, 100));
         assert!(presale_can_migrate_permissionlessly(101, 100));
+    }
+
+    #[test]
+    fn presale_pool_opens_at_contributor_price() {
+        let supply: u64 = 1_000_000_000_000_000;
+        let raised: u64 = 100_000_000_000;
+        let (_, liquidity_sol, _, _) = calculate_presale_sol_split(raised, 100).unwrap();
+        let dist = distributable_tokens(supply, 2000).unwrap(); // 60%
+        let reserve = supply / 5;
+        let (lp, burn) = presale_price_matched_liquidity(liquidity_sol, raised, dist, reserve).unwrap();
+        assert_eq!(lp + burn, reserve);
+        let contributor_px = raised as f64 / dist as f64;
+        let pool_px = liquidity_sol as f64 / lp as f64;
+        assert!((pool_px / contributor_px - 1.0).abs() < 1e-9);
+        assert_eq!(lp, supply / 100 * 12); // 12% seeded, 8% burned
     }
 
     #[test]

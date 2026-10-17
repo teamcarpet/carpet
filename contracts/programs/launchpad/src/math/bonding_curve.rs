@@ -7,6 +7,11 @@ use anchor_lang::prelude::*;
 ///
 /// All intermediate calculations use u128 to prevent overflow.
 /// Final results are bounds-checked before casting to u64.
+fn div_ceil(a: u128, b: u128) -> Result<u128> {
+    require!(b > 0, LaunchpadError::DivisionByZero);
+    Ok(a / b + u128::from(a % b != 0))
+}
+
 /// Calculate tokens received for a given SOL input.
 ///
 /// Formula: tokens_out = virtual_token_reserves - (k / (virtual_sol_reserves + sol_in))
@@ -30,10 +35,8 @@ pub fn calculate_buy_amount(
         .checked_add(sol_amount as u128)
         .ok_or(LaunchpadError::MathOverflow)?;
 
-    // k / (virtual_sol + sol_in)
-    let new_token_reserves: u128 = k
-        .checked_div(new_sol_reserves)
-        .ok_or(LaunchpadError::DivisionByZero)?;
+    // ceil(k / (virtual_sol + sol_in)) — round in the pool's favour so k never shrinks
+    let new_token_reserves: u128 = div_ceil(k, new_sol_reserves)?;
 
     // tokens_out = old_token_reserves - new_token_reserves
     let tokens_out: u128 = (virtual_token_reserves as u128)
@@ -67,10 +70,8 @@ pub fn calculate_sell_amount(
         .checked_add(token_amount as u128)
         .ok_or(LaunchpadError::MathOverflow)?;
 
-    // k / (virtual_token + tokens_in)
-    let new_sol_reserves: u128 = k
-        .checked_div(new_token_reserves)
-        .ok_or(LaunchpadError::DivisionByZero)?;
+    // ceil(k / (virtual_token + tokens_in)) — round in the pool's favour
+    let new_sol_reserves: u128 = div_ceil(k, new_token_reserves)?;
 
     // sol_out = old_sol_reserves - new_sol_reserves
     let sol_out: u128 = (virtual_sol_reserves as u128)
@@ -122,6 +123,17 @@ mod tests {
         let sol = calculate_sell_amount(virtual_sol, virtual_tokens, sell_tokens).unwrap();
         assert!(sol > 0);
         assert!(sol < virtual_sol);
+    }
+
+    #[test]
+    fn round_trip_never_profits() {
+        let (vs, vt) = (30_000_000_000u64, 1_000_000_000_000_000u64);
+        for sol in [1u64, 7, 1_000_003, 999_999_999, 5_000_000_000] {
+            let t = calculate_buy_amount(vs, vt, sol).unwrap();
+            if t == 0 { continue; }
+            let back = calculate_sell_amount(vs + sol, vt - t, t).unwrap();
+            assert!(back <= sol, "sol {sol}: got {back} back");
+        }
     }
 
     #[test]

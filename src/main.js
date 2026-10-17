@@ -31,7 +31,7 @@ import { CONFIG } from './config.js';
 import {
      renderProfile, openEditProfile, closeEditProfile,
      uploadProfileAvatar, uploadProfileBanner,
-     saveProfile as saveProfileFn, shareProfile,
+     saveProfile as saveProfileFn, renderProfileTab,
      initProfile,
    } from './profile.js';
 
@@ -546,12 +546,12 @@ ${bc ? '' : `
       <div class="ff" style="cursor:pointer;" id="pm-reg" onclick="window._app.selPresaleMode(0)">
         <div class="pm-card">
           <div class="pm-name">Regular</div>
-<div class="pm-desc">6 burns × 10% · every 4h<br>Steady, over 24 hours</div>        </div>
+<div class="pm-desc">6 equal burns · every 4h<br>Steady, over 24 hours</div>        </div>
       </div>
       <div class="ff" style="cursor:pointer;" id="pm-ext" onclick="window._app.selPresaleMode(1)">
         <div class="pm-card">
           <div class="pm-name">Extreme</div>
-<div class="pm-desc">12 burns × 5% · every 30 min<br>Fast, over 6 hours</div>        </div>
+<div class="pm-desc">12 equal burns · every 30 min<br>Fast, over 6 hours</div>        </div>
       </div>
     </div>
     `}
@@ -595,23 +595,7 @@ export function previewImage(input) {
 
 
 // ── Profile ───────────────────────────────────────────────────────────────────
-export function pfTab(el, tab) {
-  document.querySelectorAll('.pf-tab').forEach(t => t.classList.remove('on'));
-  if (el) el.classList.add('on');
-  const c = document.getElementById('pf-content');
-  if (!isConnected()) { c.innerHTML = '<div style="padding:32px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">Connect wallet to view your profile</div>'; return; }
-  const myAddr = getPublicKey()?.toBase58();
-  if (tab === 'balances') {
-    c.innerHTML = '<div style="padding:32px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">Loading balances...<br><small>Full SPL token balance view requires Helius/RPC integration</small></div>';
-  } else if (tab === 'created') {
-    const created = getTokens().filter(t => t.creator === myAddr);
-    c.innerHTML = created.length
-      ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${created.map(buildRow).join('')}</div>`
-      : '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);">No tokens created yet</div>';
-  } else if (tab === 'activity') {
-    c.innerHTML = '<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);">Activity log — connect to RPC for on-chain history</div>';
-  }
-}
+export function pfTab(_el, tab) { renderProfileTab(tab); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 // Pull every launched token from the indexer so the feed isn't limited to
@@ -710,7 +694,7 @@ export function init() {
     showN,
     renderProfile, openEditProfile, closeEditProfile,
     uploadProfileAvatar, uploadProfileBanner,
-    saveProfile: saveProfileFn, shareProfile,
+    saveProfile: saveProfileFn,
   };
 
   // Expose as globals so existing onclick="fn()" HTML attributes work
@@ -752,7 +736,7 @@ window._app = {
   showN,
   renderProfile, openEditProfile, closeEditProfile,
   uploadProfileAvatar, uploadProfileBanner,
-  saveProfile: saveProfileFn, shareProfile,
+  saveProfile: saveProfileFn,
 };
 Object.entries(window._app).forEach(([k, v]) => { window[k] = v; });
 window.copyAddr = window.copyAddrUI;

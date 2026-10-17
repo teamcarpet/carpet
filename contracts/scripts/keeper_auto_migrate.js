@@ -28,7 +28,7 @@ const os = require("os");
 const path = require("path");
 
 const PROGRAM_ID = new PublicKey(
-  process.env.LAUNCHPAD_PROGRAM_ID || "DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV"
+  process.env.LAUNCHPAD_PROGRAM_ID || "2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s"
 );
 const RPC_URL = process.env.SOLANA_RPC_URL || process.env.ANCHOR_PROVIDER_URL || "https://api.devnet.solana.com";
 const METEORA_POOL_CONFIG = new PublicKey(
@@ -475,7 +475,7 @@ async function main() {
 
   log("info", "keeper_start", {
     mode: MODE,
-    rpcUrl: RPC_URL,
+    rpcUrl: RPC_URL.replace(/api-key=[^&]+/, "api-key=***"),
     programId: PROGRAM_ID.toBase58(),
     keeper: provider.wallet.publicKey.toBase58(),
     meteoraPoolConfig: METEORA_POOL_CONFIG.toBase58(),

@@ -20,7 +20,7 @@ import { sql } from '@carpet/shared/db';
 import { logger } from '@carpet/shared';
 
 const RPC_URL = process.env.SOLANA_RPC_URL ?? 'https://api.devnet.solana.com';
-const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID ?? 'DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV');
+const PROGRAM_ID = new PublicKey(process.env.PROGRAM_ID ?? '2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s');
 const connection = new Connection(RPC_URL, 'confirmed');
 
 const INSIGHTS_TTL_MS = 30_000;

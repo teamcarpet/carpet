@@ -59,6 +59,20 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
     return { creators: rows };
   });
 
+  // A wallet's latest trades across every token (profile activity tab).
+  app.get('/activity', async (req) => {
+    const { wallet: w } = z.object({ wallet }).parse(req.query);
+    const trades = await sql`
+      SELECT tr.signature, tr.mint, tr.side, t.ticker, t.name, t.image_url AS "imageUrl",
+             tr.amount_sol::float8 AS "amountSol", tr.amount_token::float8 AS "amountToken",
+             extract(epoch FROM tr.timestamp)::bigint AS ts
+      FROM trades tr LEFT JOIN tokens t ON t.mint = tr.mint
+      WHERE tr.account = ${w}
+      ORDER BY tr.timestamp DESC LIMIT 60
+    `;
+    return { trades };
+  });
+
   // A wallet's positions on CARPET: what it put in and took out per token.
   // Current balances and prices are added client-side from the chain.
   app.get('/portfolio', async (req) => {

@@ -79,6 +79,7 @@ const GUARANTEES = [
     lead: 'When a token graduates, the program creates the Meteora DAMM v2 pool itself and keeps the LP position NFT in a program-derived account. There is no instruction that withdraws liquidity.',
     points: [
       'The LP position NFT is owned by a program PDA — not the creator, not the team.',
+      'Anyone can trigger graduation once the target is hit, so no token waits on a single operator.',
       'Only trading fees can be claimed from it, and they are split on-chain (creator / protocol / keeper).',
       'Trading on the new pool opens ~1 minute after graduation (150 slots), so it can’t be sniped in the block it is created.',
     ],
@@ -111,7 +112,7 @@ const TEAM_CANNOT = [
   'Raise any trading, presale or graduation fee above 5%',
 ];
 const TEAM_CAN = [
-  'Pause trading platform-wide or on a single pool. Pausing stops actions — it never moves funds.',
+  'Pause trading and new launches, platform-wide or on one pool. Refunds and claims keep working while paused — pausing never blocks your way out.',
   'Adjust fees, only within the hard caps written into the program.',
   `Upgrade the program while on ${NETWORK === 'MAINNET' ? 'mainnet beta' : 'devnet'}. Upgrades are public on-chain.`,
 ];
@@ -278,20 +279,20 @@ const DOCS = [
         ['Duration', 'Set by the creator (24 hours by default)'],
         ['Max per wallet', '1% of the target'],
         ['Entry fee', '1% of each contribution'],
-        ['Creator allocation', '0 – 50% of supply (20% default), claimable after graduation'],
-        ['Liquidity', '20% of supply + 20% of SOL raised'],
+        ['Creator allocation', '0 – 50% of supply (20% default), vesting linearly over 30 days from graduation'],
+        ['Liquidity', '20% of SOL raised, paired at the presale price'],
       ])}
       <h3>If the target is reached</h3>
       <p>Anyone can trigger graduation. The SOL raised is split on-chain:</p>
       ${flow([[59, 'Buyback treasury', 'c1'], [20, 'Meteora liquidity', 'c2'], [20, 'Creator', 'c3'], [1, 'Platform', 'c4']])}
-      <p>Contributors then claim their tokens from the Presales page.</p>
+      <p>The pool opens at exactly the price contributors paid: the program seeds only as many tokens as that price needs and burns the rest of the 20% liquidity reserve. Contributors then claim their tokens from the Presales page.</p>
       <h3>If the target is missed</h3>
       <p>After the end time every contributor can refund their contribution in full from the same page. The 1% entry fee is not refunded.</p>
       <h3>Buyback schedule</h3>
       <p>The creator picks the schedule at launch:</p>
       ${table(['Mode', 'Rounds', 'Each round', 'Duration'], [
-        ['Regular', '6', '10% of treasury, every 4 h', '24 hours'],
-        ['Extreme', '12', '5% of treasury, every 30 min', '6 hours'],
+        ['Regular', '6', '⅙ of the treasury, every 4 h', '24 hours'],
+        ['Extreme', '12', '1⁄12 of the treasury, every 30 min', '6 hours'],
       ])}` },
     { id: 'checklist', title: 'Before you launch', body: `
       <ul class="dc-check">
@@ -318,8 +319,9 @@ const DOCS = [
       <p>When a bonding curve reaches 100 SOL it closes for good and the token moves to an open market on Meteora DAMM v2. Curve proceeds are split on-chain:</p>
       ${flow([[80, 'Meteora liquidity', 'c2'], [19, 'Buyback treasury', 'c1'], [1, 'Platform', 'c4']])}
       <p>All sell tax collected on the curve is added to the buyback treasury on top of its 19% share.</p>
+      <p>The Meteora pool opens at the same price the curve ended on, so nobody who bought late is underwater the moment it graduates.</p>
       ${steps([
-        ['Pool is created', 'The program creates the Meteora pool and seeds it with the remaining tokens and 80% of the SOL.'],
+        ['Pool is created', 'The program creates the Meteora pool with 80% of the SOL and exactly enough tokens to open at the curve’s last price. Leftover tokens are burned.'],
         ['LP is locked', 'The position NFT is held by a program account. There is no withdraw instruction.'],
         ['Fair start', 'Trading opens 150 slots (~1 minute) later, so the pool can’t be sniped in the block it is created.'],
         ['Buyback starts', 'The treasury begins buying and burning the token on the new pool.'],
@@ -340,7 +342,7 @@ const DOCS = [
       <p>Each graduated token has its own treasury, held by the program. It can be spent one way only: buying the token on its Meteora pool and burning what it buys, in the same transaction.</p>
       ${table(['', 'Bonding tokens', 'Presale tokens'], [
         ['Funded by', '24% sell tax + 19% of curve SOL', '59% of SOL raised'],
-        ['Round size', '1% of starting treasury', '10% (Regular) or 5% (Extreme)'],
+        ['Round size', '1% of starting treasury', 'Equal slices — the whole treasury is spent'],
         ['Cadence', 'Rounds at least ~4 s apart, run by the keeper', 'Every 4 h or 30 min'],
         ['Tokens bought', 'Burned', 'Burned'],
       ])}
@@ -350,7 +352,7 @@ const DOCS = [
       ${cards([
         ['graph-up-linear', '0.5% of every trade', 'Paid to your wallet in the same transaction, on the curve.'],
         ['water-linear', '70% of LP fees', 'After graduation, from the locked Meteora position.'],
-        ['gift-linear', 'Presale allocation', '20% of SOL raised plus your token allocation.'],
+        ['gift-linear', 'Presale allocation', '20% of SOL raised, plus your tokens vesting over 30 days.'],
       ])}
       <p>Claim LP fees and presale allocations from the Rewards page. The Creators leaderboard ranks creators by graduations and volume.</p>` },
   ] },

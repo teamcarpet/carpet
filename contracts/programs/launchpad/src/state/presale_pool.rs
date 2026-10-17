@@ -92,6 +92,15 @@ impl PresalePool {
     pub const MIN_MIGRATION_TARGET: u64 = 100_000_000_000; // 100 SOL in lamports
     /// Maximum migration target: 10,000 SOL
     pub const MAX_MIGRATION_TARGET: u64 = 10_000_000_000_000; // 10,000 SOL in lamports
+    /// Creator token allocation vests linearly over 30 days from graduation
+    /// (end_time is set to the migration timestamp).
+    pub const CREATOR_VESTING_SECONDS: i64 = 30 * 24 * 60 * 60;
+}
+
+/// Creator tokens unlocked `now`, linear from `start` over the vesting period.
+pub fn vested_creator_tokens(allocation: u64, start: i64, now: i64) -> u64 {
+    let elapsed = now.saturating_sub(start).clamp(0, PresalePool::CREATOR_VESTING_SECONDS);
+    ((allocation as u128) * (elapsed as u128) / (PresalePool::CREATOR_VESTING_SECONDS as u128)) as u64
 }
 
 pub fn require_presale_pool_active(is_paused: bool) -> Result<()> {

@@ -89,6 +89,8 @@ function bn(value) {
 // min-out instead of 0 (which would let anyone sandwich the trade).
 const BPS = 10_000n;
 const big = (v) => BigInt(v.toString());
+// Mirrors the program: reserves after a trade round up, in the pool's favour.
+const ceilDiv = (a, b) => (a + b - 1n) / b;
 
 export function quoteBuy(pool, config, lamports) {
   const sol = big(lamports);
@@ -96,14 +98,14 @@ export function quoteBuy(pool, config, lamports) {
   const net = sol - fee;
   const vsr = big(pool.virtualSolReserves);
   const vtr = big(pool.virtualTokenReserves);
-  return vtr - (vsr * vtr) / (vsr + net);
+  return vtr - ceilDiv(vsr * vtr, vsr + net);
 }
 
 export function quoteSell(pool, config, tokenAmount) {
   const tokens = big(tokenAmount);
   const vsr = big(pool.virtualSolReserves);
   const vtr = big(pool.virtualTokenReserves);
-  const gross = vsr - (vsr * vtr) / (vtr + tokens);
+  const gross = vsr - ceilDiv(vsr * vtr, vtr + tokens);
   const cut = (bps) => (gross * BigInt(bps)) / BPS;
   return gross - cut(config.devFeeBps) - cut(config.platformFeeBps) - cut(config.sellTaxBps);
 }

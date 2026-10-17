@@ -6,7 +6,7 @@ Anchor/Rust smart contract implementing a token launchpad with two modes — **B
 
 - Version: `v0.1-devnet-final`
 - Network: `Devnet`
-- Program ID: `DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV`
+- Program ID: `2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s`
 
 ## Features
 

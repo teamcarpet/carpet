@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use crate::errors::LaunchpadError;
 use crate::events::PresaleClaimed;
 use crate::state::{
-    require_presale_pool_active, BuybackState, GlobalConfig, PresalePool, UserPosition,
+    BuybackState, GlobalConfig, PresalePool, UserPosition,
 };
 
 #[derive(Accounts)]
@@ -14,7 +14,6 @@ pub struct ClaimPresale<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
-        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -22,7 +21,6 @@ pub struct ClaimPresale<'info> {
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = pool.is_migrated @ LaunchpadError::NotMigrated,
-        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Box<Account<'info, PresalePool>>,
 
@@ -65,12 +63,13 @@ pub struct ClaimPresale<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+/// Withdrawals work even while the platform or pool is paused: pausing
+/// stops trading and launches, never a user's way out.
 pub fn handle_claim_presale(ctx: Context<ClaimPresale>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position = &ctx.accounts.user_position;
     let buyback_state = &ctx.accounts.buyback_state;
 
-    require_presale_pool_active(pool.is_paused)?;
 
     // ── CHECKS ──────────────────────────────────────────────────────
 

@@ -155,11 +155,10 @@ pub fn handle_execute_buyback(
     //   remaining treasury_balance.
     //
     // PRESALE (pool_type == 1): scheduled rounds. Each pool is created with
-    //   either Regular (6 × 10% / 4h) or Extreme (12 × 5% / 30min). Each
-    //   round spends `bps_per_round` of the *initial* treasury (not the
-    //   current balance) so rounds are uniform. Total burn = 60% of treasury
-    //   across all rounds for both modes. After `total_rounds` executions,
-    //   further calls revert.
+    //   either Regular (6 rounds / 4h) or Extreme (12 rounds / 30min). Each
+    //   round spends balance / rounds_left, so rounds are equal slices and
+    //   the full treasury is spent. After `total_rounds` executions, further
+    //   calls revert.
     let sol_to_spend: u64 = if buyback.pool_type == 0 {
         // Bonding: slot-based cooldown against last_buyback_slot
         if buyback.last_buyback_slot > 0 {
@@ -195,20 +194,14 @@ pub fn handle_execute_buyback(
             );
         }
 
-        // Spend = bps_per_round × initial_treasury / 10_000
-        // Using the FIXED initial_treasury means each round is a uniform
-        // 10% (Regular) or 5% (Extreme) of the pool at migration time,
-        // not a geometric decay of the remainder.
-        let amount: u128 = (buyback.initial_treasury as u128)
-            .checked_mul(buyback.bps_per_round as u128)
-            .ok_or(LaunchpadError::MathOverflow)?
-            .checked_div(10_000u128)
-            .ok_or(LaunchpadError::DivisionByZero)?;
-        let amount = u64::try_from(amount).map_err(|_| LaunchpadError::CastOverflow)?;
-
-        // Never spend more than what's left (guards against rounding drift
-        // or manual top-ups/withdrawals).
-        amount.min(buyback.treasury_balance)
+        // Spend an equal slice of what's left: balance / rounds remaining.
+        // Round 1 of 6 spends 1/6, ..., the last round spends the rest, so
+        // the whole treasury is burned (the old fixed 10% × 6 left 40% stuck).
+        presale_round_spend(
+            buyback.treasury_balance,
+            buyback.total_rounds,
+            buyback.rounds_executed,
+        )?
     };
 
     require!(sol_to_spend > 0, LaunchpadError::InsufficientTreasury);
@@ -414,6 +407,14 @@ fn validate_buyback_execution(
     Ok(())
 }
 
+fn presale_round_spend(treasury_balance: u64, total_rounds: u8, rounds_executed: u8) -> Result<u64> {
+    let left = total_rounds
+        .checked_sub(rounds_executed)
+        .ok_or(LaunchpadError::AllRoundsExecuted)?;
+    require!(left > 0, LaunchpadError::AllRoundsExecuted);
+    Ok(treasury_balance / left as u64)
+}
+
 fn calculate_bonding_buyback_spend(initial_treasury: u64, treasury_balance: u64) -> Result<u64> {
     let amount: u128 = (initial_treasury as u128)
         .checked_mul(BuybackState::BONDING_BUYBACK_BPS as u128)
@@ -482,6 +483,22 @@ fn validate_buyback_accounts(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn presale_rounds_spend_entire_treasury() {
+        for rounds in [6u8, 12u8] {
+            let mut balance: u64 = 59_000_000_007;
+            let mut spent = 0u64;
+            for done in 0..rounds {
+                let s = presale_round_spend(balance, rounds, done).unwrap();
+                balance -= s;
+                spent += s;
+            }
+            assert_eq!(balance, 0);
+            assert_eq!(spent, 59_000_000_007);
+            assert!(presale_round_spend(0, rounds, rounds).is_err());
+        }
+    }
 
     #[test]
     fn burn_buyback_leaves_no_idle_accounting() {

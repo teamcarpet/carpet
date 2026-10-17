@@ -1,0 +1,11 @@
+services:
+  keeper:
+    build: { context: .., dockerfile: keeper/Dockerfile }
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./keeper.json:/run/secrets/keeper.json:ro
+      - keeper-data:/data
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+volumes:
+  keeper-data:

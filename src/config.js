@@ -21,7 +21,7 @@ export const CONFIG = {
 
   // Launchpad program
   LAUNCHPAD: {
-    programId: import.meta.env.VITE_LAUNCHPAD_PROGRAM_ID || 'DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV',
+    programId: import.meta.env.VITE_LAUNCHPAD_PROGRAM_ID || '2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s',
     cluster: import.meta.env.VITE_LAUNCHPAD_CLUSTER || 'devnet',
     meteoraPoolConfig: import.meta.env.VITE_METEORA_POOL_CONFIG || '3KLdspUofc75aaEAJdBo1o6D6cyzXJVtGB8PgpWJEiaR',
   },

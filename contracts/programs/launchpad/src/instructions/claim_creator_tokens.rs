@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::LaunchpadError;
-use crate::state::{require_presale_pool_active, BuybackState, GlobalConfig, PresalePool};
+use crate::state::{
+    vested_creator_tokens, BuybackState, GlobalConfig, PresalePool,
+};
 
 #[derive(Accounts)]
 pub struct ClaimCreatorTokens<'info> {
@@ -11,7 +13,6 @@ pub struct ClaimCreatorTokens<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
-        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Box<Account<'info, GlobalConfig>>,
 
@@ -20,7 +21,6 @@ pub struct ClaimCreatorTokens<'info> {
         bump = pool.bump,
         constraint = pool.creator == creator.key() @ LaunchpadError::UnauthorizedCreator,
         constraint = pool.is_migrated @ LaunchpadError::NotMigrated,
-        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Box<Account<'info, PresalePool>>,
 
@@ -52,12 +52,20 @@ pub struct ClaimCreatorTokens<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+/// Withdrawals work even while the platform or pool is paused: pausing
+/// stops trading and launches, never a user's way out.
 pub fn handle_claim_creator_tokens(ctx: Context<ClaimCreatorTokens>) -> Result<()> {
-    require_presale_pool_active(ctx.accounts.pool.is_paused)?;
 
     let allocation = ctx.accounts.buyback_state.creator_token_allocation;
     let already_claimed = ctx.accounts.buyback_state.creator_tokens_claimed;
-    let claimable = allocation
+    // Linear 30-day vesting from graduation, so the creator can't dump the
+    // whole allocation into a fresh pool.
+    let vested = vested_creator_tokens(
+        allocation,
+        ctx.accounts.pool.end_time,
+        Clock::get()?.unix_timestamp,
+    );
+    let claimable = vested
         .checked_sub(already_claimed)
         .ok_or(LaunchpadError::CreatorOverclaim)?;
 

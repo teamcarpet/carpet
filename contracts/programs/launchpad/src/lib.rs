@@ -13,7 +13,7 @@ pub mod vanity;
 
 use instructions::*;
 
-declare_id!("DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV");
+declare_id!("2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s");
 
 #[program]
 pub mod launchpad {

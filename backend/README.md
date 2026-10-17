@@ -110,7 +110,7 @@ MOCK_MODE=false
 SOLANA_CLUSTER=devnet                 # or mainnet
 GEYSER_ENDPOINT=https://kaldera-frankfurt.constant-k.com/
 GEYSER_X_TOKEN=<your-rotated-token>
-PROGRAM_ID=DywpVp5YfLiX4M3xfEp333Y2dmq8xywdNAYaWDw6v9XV
+PROGRAM_ID=2coG61UUvuEscPVsdrWY4Vj4E1QYMstajAuhXs5nsH3s
 ```
 
 Restart the indexer. It should log:

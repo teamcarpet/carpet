@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::errors::LaunchpadError;
 use crate::events::PresaleRefunded;
-use crate::state::{require_presale_pool_active, GlobalConfig, PresalePool, UserPosition};
+use crate::state::{GlobalConfig, PresalePool, UserPosition};
 
 #[derive(Accounts)]
 pub struct RefundPresale<'info> {
@@ -12,7 +12,6 @@ pub struct RefundPresale<'info> {
     #[account(
         seeds = [GlobalConfig::SEED],
         bump = config.bump,
-        constraint = !config.is_paused @ LaunchpadError::PlatformPaused,
     )]
     pub config: Account<'info, GlobalConfig>,
 
@@ -21,7 +20,6 @@ pub struct RefundPresale<'info> {
         seeds = [PresalePool::SEED, pool.mint.as_ref()],
         bump = pool.bump,
         constraint = !pool.is_migrated @ LaunchpadError::AlreadyMigrated,
-        constraint = !pool.is_paused @ LaunchpadError::PoolPaused,
     )]
     pub pool: Account<'info, PresalePool>,
 
@@ -45,11 +43,12 @@ pub struct RefundPresale<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Withdrawals work even while the platform or pool is paused: pausing
+/// stops trading and launches, never a user's way out.
 pub fn handle_refund_presale(ctx: Context<RefundPresale>) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position = &ctx.accounts.user_position;
 
-    require_presale_pool_active(pool.is_paused)?;
 
     // ── CHECKS ──────────────────────────────────────────────────────
 
