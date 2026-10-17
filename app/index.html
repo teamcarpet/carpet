@@ -472,6 +472,7 @@ body{background:#000;background-image:none}
 .logo-text{font-family:var(--display);font-weight:900;letter-spacing:.04em}
 </style>
 <link rel="stylesheet" href="/src/pages/pages.css">
+<link rel="stylesheet" href="/src/pages/docs.css">
 </head>
 <body>
 
@@ -505,6 +506,7 @@ body{background:#000;background-image:none}
   </nav>
   <div class="sb-foot">
     <div class="sbi sbi-more" id="si-protect" onclick="setView('protect')"><div class="sbi-ico"><iconify-icon icon="solar:shield-check-linear"></iconify-icon></div><div class="sbi-lbl">How we protect</div></div>
+    <div class="sbi sbi-more" id="si-docs" onclick="openDocs()"><div class="sbi-ico"><iconify-icon icon="solar:book-2-linear"></iconify-icon></div><div class="sbi-lbl">Docs</div></div>
     <div class="sbi sbi-more" onclick="openSwap()"><div class="sbi-ico"><iconify-icon icon="solar:transfer-horizontal-linear"></iconify-icon></div><div class="sbi-lbl">Swap</div></div>
     <a class="sbi sbi-more" href="/" ><div class="sbi-ico"><iconify-icon icon="solar:arrow-left-linear"></iconify-icon></div><div class="sbi-lbl">carpet.money</div></a>
   </div>
@@ -612,8 +614,8 @@ body{background:#000;background-image:none}
         <div class="foot-links">
           <div class="foot-lnk">Privacy Policy</div>
           <div class="foot-lnk">Terms of Service</div>
-          <div class="foot-lnk">Fees</div>
-          <div class="foot-lnk">Docs</div>
+          <div class="foot-lnk" onclick="openDocs('fees')">Fees</div>
+          <div class="foot-lnk" onclick="openDocs()">Docs</div>
           <div class="foot-lnk">API</div>
         </div>
       </div>
@@ -621,7 +623,7 @@ body{background:#000;background-image:none}
         <div class="foot-status"><div class="dot"></div><span id="net-badge">DEVNET</span></div>
         <a class="foot-social" href="#" title="Twitter"><iconify-icon icon="ri:twitter-x-fill"></iconify-icon></a>
         <a class="foot-social" href="#" title="GitHub"><iconify-icon icon="ri:github-fill"></iconify-icon></a>
-        <a class="foot-social" href="#" title="Docs"><iconify-icon icon="solar:document-text-bold"></iconify-icon></a>
+        <a class="foot-social" href="/app/?view=docs" onclick="event.preventDefault();openDocs()" title="Docs"><iconify-icon icon="solar:document-text-bold"></iconify-icon></a>
       </div>
     </div>
   </div>

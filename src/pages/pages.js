@@ -1,6 +1,6 @@
 // src/pages/pages.js
 // Sidebar pages: Red Carpet, Presales, Furnace, Creators, Portfolio, Rewards,
-// Favorites and "How we protect". Same visual language as the landing:
+// Favorites, "How we protect" and Docs (the last two live in docs.js). Same visual language as the landing:
 // black, white pills, Doto display type, red accent.
 
 import { CONFIG } from '../config.js';
@@ -11,6 +11,9 @@ import { fmtSolAsUsd, getSolUsd, startSolPrice } from '../usd.js';
 import { getFavorites, toggleFavorite } from '../favorites.js';
 import { getTokens } from '../platform.js';
 import { tokenAvatar } from '../avatar.js';
+import { protect, docs, handleDocsClick, openDocs } from './docs.js';
+
+window.openDocs = openDocs;
 
 const short = (s) => (s && s.length > 10 ? `${s.slice(0, 4)}…${s.slice(-4)}` : s || '');
 const pct = (n) => `${(Number(n) || 0) >= 10 ? (Number(n) || 0).toFixed(0) : (Number(n) || 0).toFixed(1)}%`;
@@ -236,22 +239,10 @@ async function favorites(el) {
     (rows ? `<div class="pg-card pf-list">${rows}</div>` : empty('solar:star-linear', 'No favorites yet.', '<button class="pg-btn" onclick="setView(\'carpet\')">Browse the carpet</button>'));
 }
 
-function protect(el) {
-  const items = [
-    ['solar:lock-keyhole-bold', 'Mint is revoked', 'Supply is fixed at launch. Nobody — not the creator, not us — can print more tokens.'],
-    ['solar:snowflake-bold', 'No freezing', 'Freeze authority is removed, so no one can lock your tokens in your wallet.'],
-    ['solar:shield-user-bold', '1% max per wallet', 'The curve rejects buys that would push one wallet over 1% of supply.'],
-    ['solar:fire-bold', '24% of sells burn', 'Sell tax funds a treasury that buys back and burns the token after graduation.'],
-    ['solar:safe-square-bold', 'Liquidity locked forever', 'At graduation the LP position is locked to the program on Meteora. It can’t be pulled.'],
-    ['solar:eye-scan-bold', 'Every token is checked', 'Creator history, snipers, bundles and wallets funded from the same source — shown on every token page.'],
-  ];
-  el.innerHTML = hero('ENFORCED BY THE CONTRACT', 'How we <em>protect</em> you', 'Not promises — rules the program enforces on every launch.') +
-    `<div class="pr-grid">${items.map(([icon, t, d]) => `<div class="pg-card pr-card"><iconify-icon icon="${icon}"></iconify-icon><h3>${t}</h3><p>${d}</p></div>`).join('')}</div>` +
-    `<div class="pr-cta">${launchCta}<button class="pg-btn ghost" onclick="setView('carpet')">See the Red Carpet</button></div>`;
-}
-
-const PAGES = { carpet: redCarpet, presales, furnace, creators, portfolio, rewards, favorites, protect };
+const PAGES = { carpet: redCarpet, presales, furnace, creators, portfolio, rewards, favorites, protect, docs };
 export const PAGE_KEYS = Object.keys(PAGES);
+// No prices on these, so a SOL/USD update shouldn't re-render (and reset) them.
+const STATIC_PAGES = new Set(['protect', 'docs']);
 
 let cleanup = null;
 export async function renderPage(key, el) {
@@ -271,13 +262,15 @@ export async function renderPage(key, el) {
 // One delegated handler: any [data-open] opens that token; ☆ removes a favorite.
 export function bindPages(el, openToken) {
   el.addEventListener('click', (e) => {
+    if (handleDocsClick(e, el)) return;
     const unstar = e.target.closest('[data-unstar]');
     if (unstar) { toggleFavorite(unstar.dataset.unstar); renderPage('favorites', el); return; }
     const open = e.target.closest('[data-open]');
     if (open?.dataset.open) openToken(open.dataset.open);
   });
   window.addEventListener('usd:sol-price', () => {
-    if (el.dataset.page && el.offsetParent !== null && getSolUsd()) renderPage(el.dataset.page, el);
+    const key = el.dataset.page;
+    if (key && !STATIC_PAGES.has(key) && el.offsetParent !== null && getSolUsd()) renderPage(key, el);
   });
 }
 

@@ -139,6 +139,8 @@ export function setView(v) {
   });
   document.querySelectorAll('#sb .sbi[id^="si-"]').forEach(sbi => sbi.classList.toggle('on', sbi.id === 'si-' + v));
   closeMoreSheet();
+  // Docs writes ?view=docs#section into the URL; drop it when leaving.
+  if (v !== 'docs' && location.search.includes('view=docs')) history.replaceState(null, '', location.pathname);
   if (isPage) renderPage(v, document.getElementById('page-view'));
   if (v === 'home') setTimeout(updCrs, 60);
   if (v === 'profile') renderProfile();

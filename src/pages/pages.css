@@ -137,14 +137,6 @@ button.pf-row:hover { background: var(--bg-3); }
 .pf-open { border: 0; background: none; text-align: left; padding: 0; color: var(--text); }
 .pf-unstar { justify-self: end; border: 0; background: none; color: var(--amber); font-size: 20px; cursor: pointer; }
 
-/* How we protect */
-.pr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-.pr-card { padding: 22px; }
-.pr-card iconify-icon { font-size: 28px; color: var(--red); }
-.pr-card h3 { margin: 12px 0 6px; font-size: 17px; color: #fff; }
-.pr-card p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
-.pr-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
-
 /* Token header favorite */
 .th-fav.on { color: var(--amber); }
 
