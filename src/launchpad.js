@@ -217,7 +217,7 @@ export async function createBondingPool(wallet, mint, params = {}) {
   const program = getProgram(wallet);
   const mintPk = pk(mint);
 
-  return program.methods
+  const call = program.methods
     .createBondingPool({
       virtualSolReserves: params.virtualSolReserves == null ? null : bn(params.virtualSolReserves),
       virtualTokenReserves: params.virtualTokenReserves == null ? null : bn(params.virtualTokenReserves),
@@ -233,8 +233,8 @@ export async function createBondingPool(wallet, mint, params = {}) {
       tokenVault: getBondingTokenVaultPda(mintPk),
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+    });
+  return params.asInstruction ? call.instruction() : call.rpc();
 }
 
 export async function createPresalePool(wallet, mint, params = {}) {
@@ -242,7 +242,7 @@ export async function createPresalePool(wallet, mint, params = {}) {
   const mintPk = pk(mint);
   const endTime = params.endTimeUnix ?? Math.floor(Date.now() / 1000) + DEFAULT_PRESALE_END_SECONDS;
 
-  return program.methods
+  const call = program.methods
     .createPresalePool({
       migrationTarget: bn(params.migrationTarget ?? DEFAULT_BONDING_MIGRATION_TARGET),
       tokenSupply: bn(params.tokenSupply ?? DEFAULT_TOKEN_SUPPLY_RAW),
@@ -259,15 +259,15 @@ export async function createPresalePool(wallet, mint, params = {}) {
       tokenVault: getPresaleTokenVaultPda(mintPk),
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+    });
+  return params.asInstruction ? call.instruction() : call.rpc();
 }
 
-export async function createLaunchpadPool(wallet, mint, { mode = 'bonding', presaleMode: modeArg = 0 } = {}) {
+export async function createLaunchpadPool(wallet, mint, { mode = 'bonding', presaleMode: modeArg = 0, asInstruction = false } = {}) {
   if (mode === 'presale') {
-    return createPresalePool(wallet, mint, { presaleMode: modeArg });
+    return createPresalePool(wallet, mint, { presaleMode: modeArg, asInstruction });
   }
-  return createBondingPool(wallet, mint);
+  return createBondingPool(wallet, mint, { asInstruction });
 }
 
 // ── Bonding curve ────────────────────────────────────────────────────────
