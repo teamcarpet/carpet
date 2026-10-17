@@ -69,7 +69,7 @@ class TokenDetailView {
       this.chat      = new ChatPanel(document.getElementById('td-chat-slot'),   { mint: this.mint }),
       this.insights  = new InsightsPanel(document.getElementById('td-insights-slot'), {
         mint: this.mint,
-        onData: (d) => this.header.setInsights(d),
+        onData: (d) => { this.header.setInsights(d); this.trade.setLimits(d.safety); },
       }),
     );
 

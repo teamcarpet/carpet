@@ -65,7 +65,7 @@ export class TradePanel {
         </button>
 
         <div class="td-trade-info">
-          ${isPresale ? (isBuy ? 'Presale fee 1% · Max 1% target' : 'Available after migration') : (isBuy ? 'Fee 1% · Max 1% supply' : 'Fee 1% · Tax 24% → buyback')}
+          ${this._terms(isPresale, isBuy)}
         </div>
       </div>
     `;
@@ -96,6 +96,18 @@ export class TradePanel {
     } else if (act === 'submit') {
       this._submit();
     }
+  }
+
+  // Real pool terms from /token/insights; defaults until they arrive.
+  setLimits(safety) { this.safety = safety; this._render(); }
+
+  _terms(isPresale, isBuy) {
+    const s = this.safety || {};
+    const fee = s.buyFeePct ?? 1;
+    const tax = s.sellTaxPct ?? 24;
+    const maxBuy = s.maxBuyPct == null ? 'Max 1% supply' : s.maxBuyPct >= 100 ? 'No buy limit' : `Max ${s.maxBuyPct}% supply`;
+    if (isPresale) return isBuy ? `Presale fee ${fee}% · Max 1% of target` : 'Available after migration';
+    return isBuy ? `Fee ${fee}% · ${maxBuy}` : `Fee ${fee}% · Tax ${tax}% → buyback`;
   }
 
   _onInput(e) {

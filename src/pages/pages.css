@@ -158,6 +158,7 @@ button.pf-row:hover { background: var(--bg-3); }
   #sb .sbi { border-radius: 0 !important; height: 56px !important; background: transparent !important; color: var(--muted) !important; }
   #sb .sbi.on { color: #fff !important; }
   #sb .sbi.on .sbi-ico { color: var(--red) !important; }
+  #sb .sbi-lbl { font-family: var(--font) !important; font-size: 10.5px !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: none !important; }
   #sb .sb-create { order: 2; flex: 0 0 auto; width: 48px; height: 48px; margin: 0 6px; padding: 0; }
   #sb .sb-create span { display: none; }
   #sb #si-home { order: 0; } #sb #si-carpet { order: 1; } #sb #si-furnace { order: 3; } #sb #si-more { order: 4; }
