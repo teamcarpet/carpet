@@ -28,8 +28,9 @@ export async function createToken({
   });
 
   // 2. Create mint keypair
-  let mintKp;
-  do { mintKp = Keypair.generate(); } while (!mintKp.publicKey.toBase58().endsWith("rug"));
+  // Plain random mint. The program needs no vanity suffix, and grinding one in
+  // the browser froze the page for a minute before the wallet even opened.
+  const mintKp = Keypair.generate();
   const conn = new Connection(CONFIG.solanaRpc, 'confirmed');
   const lamports = await getMinimumBalanceForRentExemptMint(conn);
 

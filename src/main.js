@@ -72,7 +72,7 @@ function showTxN(label, sig) {
 onWalletChange(() => updateWalletUI());
 
 export async function walletClick(e) {
-  e.stopPropagation();
+  e?.stopPropagation();
   if (!isConnected()) {
     const btn = document.getElementById('cbtn');
     btn.disabled = true; btn.textContent = 'Connecting...';
