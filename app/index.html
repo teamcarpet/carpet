@@ -517,7 +517,7 @@ body{background:#000;background-image:none}
     <div class="hdr-left">
       <div class="hdr-search">
         <iconify-icon icon="solar:magnifer-bold" style="font-size:13px;"></iconify-icon>
-        <input type="text" placeholder="SEARCH TOKENS..." oninput="filterSearch(this.value)">
+        <input type="text" placeholder="Search tokens" oninput="filterSearch(this.value)">
       </div>
     </div>
     <div class="hdr-mid">
@@ -555,7 +555,7 @@ body{background:#000;background-image:none}
     <div id="crs-wrap">
       <div class="crs-head">
         <div style="display:flex;flex-direction:column;gap:2px;">
-          <div class="sk-kick"><div class="live-dot"></div>TOP 10 // 24H VOLUME RANK</div>
+          <h2 class="home-title">Tren<em>ding</em></h2><span class="home-sub">Top 10 by 24h volume</span>
         </div>
         <div class="crs-nav">
           <button class="c-arr" id="cprev" onclick="cMove(-1)"><iconify-icon icon="solar:arrow-left-bold"></iconify-icon></button>
@@ -569,30 +569,30 @@ body{background:#000;background-image:none}
       <div class="col">
         <div class="col-head"><div class="col-title"><span class="col-ic n"></span><span class="col-name">New</span></div><div class="col-count" id="cnt-new">0</div></div>
         <div class="col-filters" id="flt-new">
-          <button class="cf on" data-col="new" data-sort="date" onclick="setColSort(this)"><iconify-icon icon="solar:bolt-bold" style="font-size:10px;"></iconify-icon> Fresh</button>
-          <button class="cf" data-col="new" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:fire-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="new" data-sort="holders" onclick="setColSort(this)"><iconify-icon icon="solar:users-group-rounded-bold" style="font-size:10px;"></iconify-icon> Holders</button>
-          <button class="cf" data-col="new" data-sort="mc" onclick="setColSort(this)"><iconify-icon icon="solar:dollar-minimalistic-bold" style="font-size:10px;"></iconify-icon> MCap</button>
+          <button class="cf on" data-col="new" data-sort="date" onclick="setColSort(this)">Fresh</button>
+          <button class="cf" data-col="new" data-sort="vol" onclick="setColSort(this)">Volume</button>
+          <button class="cf" data-col="new" data-sort="holders" onclick="setColSort(this)">Holders</button>
+          <button class="cf" data-col="new" data-sort="mc" onclick="setColSort(this)">MCap</button>
         </div>
         <div class="col-body" id="col-new"></div>
       </div>
       <div class="col">
         <div class="col-head"><div class="col-title"><span class="col-ic b"></span><span class="col-name">Almost Bonded</span></div><div class="col-count" id="cnt-bonding">0</div></div>
         <div class="col-filters" id="flt-bonding">
-          <button class="cf on" data-col="bonding" data-sort="prog" onclick="setColSort(this)"><iconify-icon icon="solar:fire-bold" style="font-size:10px;"></iconify-icon> Progress</button>
-          <button class="cf" data-col="bonding" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:chart-2-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="bonding" data-sort="holders" onclick="setColSort(this)"><iconify-icon icon="solar:users-group-rounded-bold" style="font-size:10px;"></iconify-icon> Holders</button>
-          <button class="cf" data-col="bonding" data-sort="pct" onclick="setColSort(this)"><iconify-icon icon="solar:chart-bold" style="font-size:10px;"></iconify-icon> 24h %</button>
+          <button class="cf on" data-col="bonding" data-sort="prog" onclick="setColSort(this)">Progress</button>
+          <button class="cf" data-col="bonding" data-sort="vol" onclick="setColSort(this)">Volume</button>
+          <button class="cf" data-col="bonding" data-sort="holders" onclick="setColSort(this)">Holders</button>
+          <button class="cf" data-col="bonding" data-sort="pct" onclick="setColSort(this)">24h %</button>
         </div>
         <div class="col-body" id="col-bonding"></div>
       </div>
       <div class="col">
         <div class="col-head"><div class="col-title"><span class="col-ic g"></span><span class="col-name">Graduated</span></div><div class="col-count" id="cnt-migrated">0</div></div>
         <div class="col-filters" id="flt-migrated">
-          <button class="cf on" data-col="migrated" data-sort="date" onclick="setColSort(this)"><iconify-icon icon="solar:clock-circle-bold" style="font-size:10px;"></iconify-icon> Recent</button>
-          <button class="cf" data-col="migrated" data-sort="mc" onclick="setColSort(this)"><iconify-icon icon="solar:dollar-minimalistic-bold" style="font-size:10px;"></iconify-icon> MCap</button>
-          <button class="cf" data-col="migrated" data-sort="vol" onclick="setColSort(this)"><iconify-icon icon="solar:chart-2-bold" style="font-size:10px;"></iconify-icon> Volume</button>
-          <button class="cf" data-col="migrated" data-sort="pct" onclick="setColSort(this)"><iconify-icon icon="solar:chart-bold" style="font-size:10px;"></iconify-icon> 24h %</button>
+          <button class="cf on" data-col="migrated" data-sort="date" onclick="setColSort(this)">Recent</button>
+          <button class="cf" data-col="migrated" data-sort="mc" onclick="setColSort(this)">MCap</button>
+          <button class="cf" data-col="migrated" data-sort="vol" onclick="setColSort(this)">Volume</button>
+          <button class="cf" data-col="migrated" data-sort="pct" onclick="setColSort(this)">24h %</button>
         </div>
         <div class="col-body" id="col-migrated"></div>
       </div>
@@ -604,9 +604,9 @@ body{background:#000;background-image:none}
           <div class="logo-mark" style="width:26px;height:26px;background:transparent;">
             <img src="/logo.png" alt="CARPET" style="width:100%;height:100%;display:block;object-fit:contain;">
           </div>
-          CARPET <span class="foot-brand-dim">TERMINAL</span>
+          CARPET <span class="foot-brand-dim">LAUNCHPAD</span>
         </div>
-        <div class="foot-tagline">EVERY TOKEN DESERVES A RED CARPET MOMENT</div>
+        <div class="foot-tagline">Every token deserves a red carpet moment</div>
       </div>
       <div class="foot-c">
         <div class="foot-links">

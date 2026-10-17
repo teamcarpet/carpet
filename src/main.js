@@ -1,6 +1,7 @@
 import { startSolPrice, fmtSolAsUsd } from './usd.js';
 import { PAGE_KEYS, renderPage, bindPages } from './pages/pages.js';
 import { esc } from './escape.js';
+import { tokenAvatar } from './avatar.js';
 import {
   connectWallet, disconnectWallet, isConnected,
   getPublicKey, getBalance, getShortAddress,
@@ -225,20 +226,19 @@ function buildCrs() {
   if (!top.length) { document.getElementById('c-trk').innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px;">No tokens yet — launch the first one!</div>'; return; }
   document.getElementById('c-trk').innerHTML = top.map((t, i) => {
     const k = t.col === 'migrated' ? 'migrated' : t.mode === 'presale' ? 'presale' : 'bonding';
+    const prog = Math.min(100, Number(t.prog) || 0);
     return `<div class="ccard" data-k="${k}" onclick="window._app.openDet('${t.id}')">
-      <div class="ccard-top">
-        <div class="ccard-em">${esc(t.em || '🎯')}</div>
-        <div class="ccard-inf">
-          <div class="ccard-rank">#${String(i + 1).padStart(2, '0')} · Volume Rank</div>
-          <div class="ccard-name">${esc(t.n)}</div>
-          <div class="ccard-tk">$${esc(t.tk)}</div>
-        </div>
-        <div class="ccard-pct ${(t.pct || 0) >= 0 ? 'up-c' : 'dn-c'}">${(t.pct || 0) >= 0 ? '+' : ''}${(t.pct || 0)}%</div>
+      <div class="cc-top">
+        ${tokenAvatar({ imageUrl: t.imageUrl, mint: t.mint, ticker: t.tk })}
+        <div class="cc-id"><b>${esc(t.n)}</b><span>$${esc(t.tk)}</span></div>
+        <span class="cc-rank">#${String(i + 1).padStart(2, '0')}</span>
       </div>
-      <div class="ccard-foot">
-        <div class="ccard-mc"><div class="ccard-mcl">Market Cap</div><div class="ccard-mcv">${fm(t.mc || 0)}</div></div>
-        <div class="ccard-vol"><div class="ccard-voll">24h Volume</div><div class="ccard-volv">${fm(t.vol || 0)}</div></div>
+      <div class="cc-mc">${fm(t.mc || 0)}${pctChip(t.pct)}</div>
+      <div class="cc-foot">
+        <span>Vol 24h <b>${fm(t.vol || 0)}</b></span>
+        <span>${k === 'migrated' ? 'Graduated' : `${fmtProg(prog)} curve`}</span>
       </div>
+      ${k === 'migrated' ? '' : `<div class="cc-track"><span style="width:${prog}%"></span><i style="left:${prog}%"></i></div>`}
     </div>`;
   }).join('');
   updCrs();
@@ -259,40 +259,37 @@ function sortTokens(list, sort) {
     return 0;
   });
 }
+const fmtProg = (p) => `${(Number(p) || 0).toFixed(Number(p) >= 10 || !Number(p) ? 0 : 1)}%`;
+function pctChip(p) {
+  const v = Number(p) || 0;
+  if (Math.abs(v) < 0.05) return '';
+  return `<span class="pct-chip ${v > 0 ? 'up' : 'dn'}">${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(1)}%</span>`;
+}
 function buildRow(t) {
-  const up = (t.pct || 0) >= 0, cls = t.col === 'migrated' ? 't-g' : t.col === 'bonding' ? 't-b' : 't-n';
-  const progBlk = t.col !== 'migrated' ? `<div class="tr-prog-row"><div class="tr-prog"><div class="tr-prog-f${(t.prog || 0) >= 100 ? ' full' : ''}" style="width:${t.prog || 0}%"></div></div><div class="tr-prog-pct${(t.prog || 0) >= 100 ? ' full' : ''}">${t.prog || 0}%</div></div>` : '';
+  const prog = Math.min(100, Number(t.prog) || 0);
   const age = t.createdAt ? fAge(t.createdAt) : (t.age || '—');
   const isCreator = isConnected() && getPublicKey()?.toBase58() === t.creator;
-  const editBtn = isCreator ? `<button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:6px;" onclick="event.stopPropagation();window._app.openEditToken('${t.id}')"><iconify-icon icon="solar:pen-bold" style="font-size:10px;"></iconify-icon> Edit</button>` : '';
-  const creatorClaimBtn = isCreator && t.mode === 'presale'
-    ? `<button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;" onclick="event.stopPropagation();window._app.claimCreatorForToken('${t.id}', this)"><iconify-icon icon="solar:gift-bold" style="font-size:10px;"></iconify-icon> Creator Claim</button>`
-    : '';
   const creatorBtns = isCreator ? `
-    ${creatorClaimBtn}
-    <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;opacity:.55;cursor:not-allowed;" disabled title="Coming after Meteora integration"><iconify-icon icon="solar:rocket-bold" style="font-size:10px;"></iconify-icon> Migrate: Meteora soon</button>
-    <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:9px;margin-left:4px;opacity:.55;cursor:not-allowed;" disabled title="Coming after Meteora integration"><iconify-icon icon="solar:wallet-money-bold" style="font-size:10px;"></iconify-icon> Fees: Meteora soon</button>
-  ` : '';
-  return `<div class="tr ${cls}" onclick="window._app.openDet('${t.id}')">
-    <div class="tr-em">${esc(t.em || '🎯')}</div>
-    <div class="tr-inf">
-      <div class="tr-row">
-        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-          <span class="tr-name">${esc(t.n)}</span>
-          <span class="tr-tk">$${esc(t.tk)}</span>
-          ${editBtn}
-          ${creatorBtns}
-        </div>
-        <div class="tr-pct ${up ? 'up-c' : 'dn-c'}">${up ? '+' : ''}${(t.pct || 0)}%</div>
+    <button class="tr-mini" onclick="event.stopPropagation();window._app.openEditToken('${t.id}')"><iconify-icon icon="solar:pen-linear"></iconify-icon>Edit</button>
+    ${t.mode === 'presale' ? `<button class="tr-mini" onclick="event.stopPropagation();window._app.claimCreatorForToken('${t.id}', this)"><iconify-icon icon="solar:gift-linear"></iconify-icon>Claim</button>` : ''}` : '';
+  return `<div class="tr" onclick="window._app.openDet('${t.id}')">
+    ${tokenAvatar({ imageUrl: t.imageUrl, mint: t.mint, ticker: t.tk })}
+    <div class="tr-body">
+      <div class="tr-line">
+        <span class="tr-name">${esc(t.n)}</span>
+        <span class="tr-tk">$${esc(t.tk)}</span>
+        ${creatorBtns}
+        <span class="tr-mc">${fm(t.mc || 0)}</span>
       </div>
-      <div class="tr-row">
-        <div class="tr-meta"><span>MC <b>${fm(t.mc || 0)}</b></span><span>V <b>${fm(t.vol || 0)}</b></span><span>H <b>${fh(t.h || 0)}</b></span></div>
-        <div class="tr-age">${age}</div>
+      <div class="tr-line tr-meta">
+        <span>${age}</span><span>·</span><span>${fh(t.h || 0)} holders</span><span>·</span><span>vol ${fm(t.vol || 0)}</span>
+        ${pctChip(t.pct)}
       </div>
-      ${progBlk}
+      ${t.col === 'migrated' ? '' : `<div class="tr-prog"><div class="tr-track"><span style="width:${prog}%"></span></div><b>${fmtProg(prog)}</b></div>`}
     </div>
   </div>`;
 }
+
 function renderCol(col) {
   let list = getTokens().filter(t => t.col === col);
   if (searchQ) list = list.filter(t => (t.n || '').toLowerCase().includes(searchQ) || (t.tk || '').toLowerCase().includes(searchQ));

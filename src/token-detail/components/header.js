@@ -5,6 +5,7 @@
 
 import { esc, safeUrl } from '../../escape.js';
 import { isFavorite, toggleFavorite } from '../../favorites.js';
+import { tokenAvatar } from '../../avatar.js';
 
 function shorten(s, n = 4) {
   if (!s || s.length < 12) return s || '';
@@ -56,10 +57,7 @@ export class Header {
     const c = this.insights?.creator;
     const ticker = i.tk || this.mint.slice(0, 4).toUpperCase();
     const name = i.n || 'Loading…';
-    const imgUrl = safeUrl(i.imageUrl);
-    const avatar = imgUrl
-      ? `<img class="th-avatar" src="${esc(imgUrl)}" alt="">`
-      : `<div class="th-avatar th-avatar-emoji">${esc(i.em || '🎯')}</div>`;
+    const avatar = tokenAvatar({ imageUrl: i.imageUrl, mint: this.mint, ticker }, 'th-avatar');
 
     const socials = [
       ['x', socialUrl('x', i.twitter), 'ri:twitter-x-fill', 'X / Twitter'],

@@ -10,6 +10,7 @@ import { getPublicKey, isConnected } from '../wallet.js';
 import { fmtSolAsUsd, getSolUsd, startSolPrice } from '../usd.js';
 import { getFavorites, toggleFavorite } from '../favorites.js';
 import { getTokens } from '../platform.js';
+import { tokenAvatar } from '../avatar.js';
 
 const short = (s) => (s && s.length > 10 ? `${s.slice(0, 4)}…${s.slice(-4)}` : s || '');
 const pct = (n) => `${(Number(n) || 0) >= 10 ? (Number(n) || 0).toFixed(0) : (Number(n) || 0).toFixed(1)}%`;
@@ -27,10 +28,7 @@ const ago = (sec) => {
   return `${Math.floor(s / 86400)}d ago`;
 };
 
-function avatar(t) {
-  const url = safeUrl(t?.imageUrl);
-  return url ? `<img class="pg-av" src="${esc(url)}" alt="">` : `<div class="pg-av pg-av-e">🎯</div>`;
-}
+const avatar = (t) => tokenAvatar({ imageUrl: t?.imageUrl, mint: t?.mint, ticker: t?.ticker || t?.tk }, 'pg-av');
 
 function hero(kicker, title, sub, stats = '') {
   return `
@@ -100,7 +98,7 @@ async function presales(el) {
   const cards = items.map(p => `
     <button class="ps-card ${p.state}" ${tokenLink(p.mint)}>
       <div class="ps-top">
-        ${avatar(p.token)}
+        ${avatar({ ...(p.token || {}), mint: p.mint })}
         <div class="ps-name"><b>$${esc(p.token?.tk || p.mint.slice(0, 4))}</b><small>${esc(p.token?.n || 'Presale')}</small></div>
         <span class="ps-mode ${p.mode.toLowerCase()}">${p.mode}</span>
       </div>
