@@ -7,6 +7,7 @@
 //   GET /tokens?col=new|bonding|migrated&sort=...
 //   GET /candles?mint=...&resolution=...&from=...&to=...
 //   GET /trades?mint=...&limit=...&minSol=...
+//   POST /vanity-mint   (one pre-ground "…rug" mint keypair per launch)
 //
 // All endpoints are public (no auth) — protected by per-IP rate limiting.
 // ─────────────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ import { statsRoutes }   from './routes/stats.js';
 import { seriesRoutes }  from './routes/series.js';
 import { insightsRoutes } from './routes/insights.js';
 import { platformRoutes } from './routes/platform.js';
+import { vanityRoutes } from './vanity.js';
 
 const env = loadEnv(z.object({
   API_PORT:             z.coerce.number().int().positive().default(3000),
@@ -42,7 +44,7 @@ const app = Fastify({
 // ── Plugins ──────────────────────────────────────────────────────────────
 await app.register(cors, {
   origin: true,                   // allow any origin — public read API
-  methods: ['GET', 'OPTIONS'],
+  methods: ['GET', 'POST', 'OPTIONS'],
   credentials: false,
 });
 
@@ -67,6 +69,7 @@ await app.register(statsRoutes);
 await app.register(seriesRoutes);
 await app.register(insightsRoutes);
 await app.register(platformRoutes);
+await app.register(vanityRoutes);
 
 // ── Boot ─────────────────────────────────────────────────────────────────
 try {

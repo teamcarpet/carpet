@@ -12,6 +12,21 @@ import { uploadTokenMetadata } from './ipfs.js';
 import { addToken } from './platform.js';
 import { createLaunchpadPool } from './launchpad.js';
 
+async function claimVanityMint() {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(`${CONFIG.apiUrl}/vanity-mint`, { method: 'POST', signal: ctrl.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const { pubkey, secretKey } = await res.json();
+      const kp = Keypair.fromSecretKey(Uint8Array.from(atob(secretKey), (c) => c.charCodeAt(0)));
+      if (kp.publicKey.toBase58() === pubkey) return kp;
+    }
+  } catch {}
+  return Keypair.generate();
+}
+
 export async function createToken({
   name, symbol, description,
   imageFile, website, twitter, telegram,
@@ -28,9 +43,9 @@ export async function createToken({
   });
 
   // 2. Create mint keypair
-  // Plain random mint. The program needs no vanity suffix, and grinding one in
-  // the browser froze the page for a minute before the wallet even opened.
-  const mintKp = Keypair.generate();
+  // Mint address ending in "rug", pre-ground by the API (grinding in the
+  // browser froze the page). Falls back to a random mint so a launch never waits.
+  const mintKp = await claimVanityMint();
   const conn = new Connection(CONFIG.solanaRpc, 'confirmed');
   const lamports = await getMinimumBalanceForRentExemptMint(conn);
 
