@@ -646,26 +646,26 @@ body{background:#000;background-image:none}
     <div class="mbdy">
       <div class="step-bar"><div class="step on" id="s1">01 Mode</div><div class="step" id="s2">02 Details</div><div class="step" id="s3">03 Preview</div><div class="step" id="s4">04 Launch</div></div>
       <div id="llobby">
-        <p style="text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:18px;letter-spacing:1px;text-transform:uppercase;">// Every token deserves a red carpet moment</p>
+        <h3 class="lm-title">How do you want to <em>launch</em>?</h3>
         <div class="mode-cards">
           <div class="mcard" id="mbc" onclick="selMode('bonding')">
-            <div class="mic"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:36px;color:var(--red);"></iconify-icon></div>
+            <div class="mic"><iconify-icon icon="solar:graph-up-linear"></iconify-icon></div>
             <div class="mn2">Bonding</div>
-            <div class="md">Dynamic pricing<br>24% sell tax<br>Migration at 100 SOL</div>
+            <div class="md">Trading starts instantly on a bonding curve. 24% of sells fund buyback &amp; burn. Graduates to Meteora at 100 SOL.</div>
           </div>
           <div class="mcard" id="mps" onclick="selMode('presale')">
-            <div class="mic"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:36px;color:var(--red);"></iconify-icon></div>
+            <div class="mic"><iconify-icon icon="solar:hourglass-linear"></iconify-icon></div>
             <div class="mn2">Presale</div>
-            <div class="md">Equal entry<br>Community launch<br>60% buyback pool</div>
+            <div class="md">Community raises first, max 1% of the target per wallet. Full refund if the target is missed. 60% of the treasury is burned.</div>
           </div>
         </div>
         <div style="text-align:center;"><button class="btn btn-primary btn-lg" onclick="goStep2()">Continue <iconify-icon icon="solar:arrow-right-bold" style="font-size:12px;"></iconify-icon></button></div>
       </div>
       <div id="lfa"><div id="lfc"></div><div class="mft"><button class="btn btn-ghost" onclick="goStep1()"><iconify-icon icon="solar:arrow-left-bold" style="font-size:11px;"></iconify-icon> Back</button><button class="btn btn-primary" onclick="goStep3()"><iconify-icon icon="solar:eye-bold" style="font-size:11px;"></iconify-icon> Preview</button></div></div>
       <div id="lprev">
-        <p style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;">// Review before launch</p>
+        <h3 class="lm-title">Review before <em>launch</em></h3>
         <div class="prev-card">
-          <div class="prev-img">🎭</div>
+          <div class="prev-img"></div>
           <div class="prev-body">
             <div class="prev-name" id="prev-name">Token</div>
             <div class="prev-tk" id="prev-tk">$TK</div>
@@ -682,8 +682,8 @@ body{background:#000;background-image:none}
       <div id="lsuccess"><div class="suc-wrap">
         <div style="margin-bottom:16px;"><iconify-icon icon="solar:rocket-bold-duotone" style="font-size:64px;color:var(--red);"></iconify-icon></div>
         <div class="suc-title">Launched</div>
-        <div class="suc-sub" id="suc-sub">// Your token is live on Carpet</div>
-        <a id="suc-sig" href="#" target="_blank" style="display:block;font-family:var(--mono);font-size:10px;color:var(--cyan);margin-bottom:12px;letter-spacing:.5px;">View on Solscan →</a>
+        <div class="suc-sub" id="suc-sub">Your token is live on CARPET</div>
+        <a id="suc-sig" class="suc-link" href="#" target="_blank">View on Solscan →</a>
         <button class="btn btn-ghost" style="width:100%;margin-top:6px;" onclick="closeLaunch()">Close</button>
       </div></div>
     </div>

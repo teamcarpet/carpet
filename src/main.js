@@ -536,20 +536,20 @@ function buildForm(mode) {
       <div class="igr"><span class="igk">Migration</span><span class="igv">${bc ? '100 SOL' : '100-10K SOL'}</span></div>
       <div class="igr"><span class="igk">Max Wallet</span><span class="igv">1%</span></div>
       <div class="igr"><span class="igk">Buy Fee</span><span class="igv">1%</span></div>
-      <div class="igr"><span class="igk">Sell</span><span class="igv">${bc ? '1%+24%→buyback' : 'No sell pre-mig'}</span></div>
+      <div class="igr"><span class="igk">Sell</span><span class="igv">${bc ? '24% → buyback' : 'After graduation'}</span></div>
     </div>
 ${bc ? '' : `
-    <div class="fstit">Buyback Mode</div>
+    <div class="fstit">Buyback schedule after graduation</div>
     <div class="frow">
       <div class="ff" style="cursor:pointer;" id="pm-reg" onclick="window._app.selPresaleMode(0)">
-        <div style="padding:14px;border:1px solid var(--red-bdr);border-radius:6px;background:var(--bg);transition:all .15s;" class="pm-card">
-          <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Regular</div>
-<div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5;">6 rounds × 10%<br>Every 4h · 24h cycle<br>Steady pump</div>        </div>
+        <div class="pm-card">
+          <div class="pm-name">Regular</div>
+<div class="pm-desc">6 burns × 10% · every 4h<br>Steady, over 24 hours</div>        </div>
       </div>
       <div class="ff" style="cursor:pointer;" id="pm-ext" onclick="window._app.selPresaleMode(1)">
-        <div style="padding:14px;border:1px solid var(--red-bdr);border-radius:6px;background:var(--bg);transition:all .15s;" class="pm-card">
-          <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Extreme</div>
-<div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5;">12 rounds × 5%<br>Every 30min · 6h cycle<br>Aggressive pump</div>        </div>
+        <div class="pm-card">
+          <div class="pm-name">Extreme</div>
+<div class="pm-desc">12 burns × 5% · every 30 min<br>Fast, over 6 hours</div>        </div>
       </div>
     </div>
     `}
@@ -562,12 +562,12 @@ ${bc ? '' : `
     <div class="frow">
       <div class="ff">
         <label class="fl">Token Image</label>
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px dashed var(--red-bdr);border-radius:6px;cursor:pointer;transition:all .15s;" id="img-label" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--red-bdr)'">
-          <iconify-icon icon="solar:upload-bold" style="font-size:18px;color:var(--red);"></iconify-icon>
-          <span id="img-label-txt" style="font-family:var(--mono);font-size:11px;color:var(--muted);">Upload from device (PNG/JPG/GIF · max 10MB)</span>
+        <label class="up-drop" id="img-label" onmouseover="this.style.borderColor='var(--red)'" onmouseout="this.style.borderColor='var(--red-bdr)'">
+          <iconify-icon icon="solar:gallery-add-linear"></iconify-icon>
+          <span id="img-label-txt">Upload image · PNG, JPG, GIF, WEBP · max 4 MB</span>
           <input type="file" id="f-img" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="window._app.previewImage(this)">
         </label>
-        <div id="img-preview" style="display:none;margin-top:8px;"><img id="img-prev-el" style="width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--red-bdr);" alt="preview"></div>
+        <div id="img-preview" style="display:none;margin-top:8px;"><img id="img-prev-el" class="up-prev" alt="preview"></div>
       </div>
       <div class="ff"><label class="fl">Website</label><input class="fi" id="f-web" placeholder="https://..."></div>
     </div>
@@ -580,10 +580,8 @@ ${bc ? '' : `
 
 export function selPresaleMode(m) {
   presaleM = m;
-  const reg = document.querySelector('#pm-reg .pm-card');
-  const ext = document.querySelector('#pm-ext .pm-card');
-  if (reg) { reg.style.borderColor = m === 0 ? 'var(--red)' : 'var(--red-bdr)'; reg.style.boxShadow = m === 0 ? '0 0 12px var(--red-glow)' : 'none'; }
-  if (ext) { ext.style.borderColor = m === 1 ? 'var(--red)' : 'var(--red-bdr)'; ext.style.boxShadow = m === 1 ? '0 0 12px var(--red-glow)' : 'none'; }
+  document.querySelector('#pm-reg .pm-card')?.classList.toggle('sel', m === 0);
+  document.querySelector('#pm-ext .pm-card')?.classList.toggle('sel', m === 1);
 }
 export function previewImage(input) {
   const file = input.files[0]; if (!file) return;
