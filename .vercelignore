@@ -1,0 +1,10 @@
+# The site only needs the Vite app, api/ functions and server/handlers.js.
+contracts/
+backend/
+node_modules/
+dist/
+.planning/
+*.log
+.env
+.env.*
+!.env.example
