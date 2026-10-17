@@ -35,9 +35,9 @@
 /* ── Bigger logos ── */
 /* Header logo (sidebar top) */
 @media (min-width: 769px) {
-  :root { --sb-w: 64px !important; }
+  :root { --sb-w: 232px !important; }
   .sb-top { height: 72px !important; }
-  #sb .logo-mark { width: 52px !important; height: 52px !important; }
+  #sb .logo-mark { width: 40px !important; height: 40px !important; }
   #sb .logo-text { font-size: 19px !important; }
 }
 
@@ -471,6 +471,7 @@ body{background:#000;background-image:none}
 .logo-mark{background:#fff;border-radius:50%;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.16)}
 .logo-text{font-family:var(--display);font-weight:900;letter-spacing:.04em}
 </style>
+<link rel="stylesheet" href="/src/pages/pages.css">
 </head>
 <body>
 
@@ -489,12 +490,23 @@ body{background:#000;background-image:none}
     </div>
   </div>
   <nav class="sb-nav">
-    <div class="sbi on" id="si-home" onclick="setView('home')"><div class="sbi-ico"><iconify-icon icon="solar:home-2-bold"></iconify-icon></div><div class="sbi-lbl">Home</div></div>
-    <div class="sbi" id="si-profile" onclick="setView('profile')"><div class="sbi-ico"><iconify-icon icon="solar:user-rounded-bold"></iconify-icon></div><div class="sbi-lbl">Profile</div></div>
+    <div class="sbi on" id="si-home" onclick="setView('home')"><div class="sbi-ico"><iconify-icon icon="solar:home-2-linear"></iconify-icon></div><div class="sbi-lbl">Home</div></div>
+    <div class="sbi sbi-sig" id="si-carpet" onclick="setView('carpet')"><div class="sbi-ico"><iconify-icon icon="solar:rocket-2-linear"></iconify-icon></div><div class="sbi-lbl">Red Carpet</div></div>
+    <div class="sbi sbi-more" id="si-presales" onclick="setView('presales')"><div class="sbi-ico"><iconify-icon icon="solar:hourglass-linear"></iconify-icon></div><div class="sbi-lbl">Presales</div></div>
+    <div class="sbi" id="si-furnace" onclick="setView('furnace')"><div class="sbi-ico"><iconify-icon icon="solar:fire-linear"></iconify-icon></div><div class="sbi-lbl">Furnace</div></div>
+    <div class="sbi sbi-more" id="si-creators" onclick="setView('creators')"><div class="sbi-ico"><iconify-icon icon="solar:cup-star-linear"></iconify-icon></div><div class="sbi-lbl">Creators</div></div>
+    <div class="sb-sec sbi-more">You</div>
+    <div class="sbi sbi-more" id="si-portfolio" onclick="setView('portfolio')"><div class="sbi-ico"><iconify-icon icon="solar:bag-4-linear"></iconify-icon></div><div class="sbi-lbl">Portfolio</div></div>
+    <div class="sbi sbi-more" id="si-rewards" onclick="setView('rewards')"><div class="sbi-ico"><iconify-icon icon="solar:hand-money-linear"></iconify-icon></div><div class="sbi-lbl">Rewards</div></div>
+    <div class="sbi sbi-more" id="si-favorites" onclick="setView('favorites')"><div class="sbi-ico"><iconify-icon icon="solar:star-linear"></iconify-icon></div><div class="sbi-lbl">Favorites</div></div>
+    <div class="sbi sbi-more" id="si-profile" onclick="setView('profile')"><div class="sbi-ico"><iconify-icon icon="solar:user-rounded-linear"></iconify-icon></div><div class="sbi-lbl">Profile</div></div>
+    <button class="sb-create" onclick="openLaunch()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Launch a token</span></button>
+    <div class="sbi sbi-mobile" id="si-more" onclick="toggleMoreSheet()"><div class="sbi-ico"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></div><div class="sbi-lbl">More</div></div>
   </nav>
   <div class="sb-foot">
-    <button class="sb-btn prim" onclick="openLaunch()" title="Launch"><iconify-icon icon="solar:rocket-bold"></iconify-icon></button>
-    <button class="sb-btn" onclick="openSwap()" title="Swap"><iconify-icon icon="solar:transfer-horizontal-bold"></iconify-icon></button>
+    <div class="sbi sbi-more" id="si-protect" onclick="setView('protect')"><div class="sbi-ico"><iconify-icon icon="solar:shield-check-linear"></iconify-icon></div><div class="sbi-lbl">How we protect</div></div>
+    <div class="sbi sbi-more" onclick="openSwap()"><div class="sbi-ico"><iconify-icon icon="solar:transfer-horizontal-linear"></iconify-icon></div><div class="sbi-lbl">Swap</div></div>
+    <a class="sbi sbi-more" href="/" ><div class="sbi-ico"><iconify-icon icon="solar:arrow-left-linear"></iconify-icon></div><div class="sbi-lbl">carpet.money</div></a>
   </div>
 </aside>
 
@@ -618,6 +630,8 @@ body{background:#000;background-image:none}
   
   <!-- PROFILE VIEW -->
   <div id="profile-view" style="display:none;flex-direction:column;padding-bottom:40px;"></div>
+  <div id="page-view" class="pg" style="display:none;"></div>
+  <div id="more-sheet" class="more-sheet" hidden></div>
 
   <!-- TOKEN DETAIL MOUNT -->
  <div id="td-mount" style="display:none;"></div>

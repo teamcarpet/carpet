@@ -1,4 +1,5 @@
 import { startSolPrice, fmtSolAsUsd } from './usd.js';
+import { PAGE_KEYS, renderPage, bindPages } from './pages/pages.js';
 import { esc } from './escape.js';
 import {
   connectWallet, disconnectWallet, isConnected,
@@ -130,12 +131,14 @@ export function setView(v) {
   // Also unmount the token detail to clean up its WS / fetchers
   try { unmountTokenDetail(); } catch {}
 
-  ['home', 'profile'].forEach(id => {
+  const isPage = PAGE_KEYS.includes(v);
+  ['home', 'profile', 'page'].forEach(id => {
     const el = document.getElementById(id + '-view');
-    if (el) el.style.display = id === v ? 'flex' : 'none';
-    const sbi = document.getElementById('si-' + id);
-    if (sbi) sbi.classList.toggle('on', id === v);
+    if (el) el.style.display = (isPage ? id === 'page' : id === v) ? (id === 'page' ? 'block' : 'flex') : 'none';
   });
+  document.querySelectorAll('#sb .sbi[id^="si-"]').forEach(sbi => sbi.classList.toggle('on', sbi.id === 'si-' + v));
+  closeMoreSheet();
+  if (isPage) renderPage(v, document.getElementById('page-view'));
   if (v === 'home') setTimeout(updCrs, 60);
   if (v === 'profile') renderProfile();
 }
@@ -154,7 +157,7 @@ export function openDet(id) {
     return;
   }
   // Show the mount container, hide other views.
-  ['home', 'profile'].forEach(v => {
+  ['home', 'profile', 'page'].forEach(v => {
     const el = document.getElementById(v + '-view');
     if (el) el.style.display = 'none';
   });
@@ -635,19 +638,42 @@ async function syncIndexedTokens() {
 }
 window.addEventListener('platform:tokens-synced', () => { renderAll(); refreshTicker(); });
 
-// Landing-page links and share links: ?launch=1, ?token=<mint>
+// Open any token by mint — from pages, share links or search.
+export function openToken(mint) {
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) { showN('Invalid token link'); return; }
+  if (!getTokens().some(t => t.mint === mint)) {
+    mergeIndexedTokens([{ mint, ticker: mint.slice(0, 4).toUpperCase(), name: `Token ${mint.slice(0, 6)}` }]);
+  }
+  const token = getTokens().find(t => t.mint === mint);
+  if (token) openDet(token.id);
+}
+
+// Mobile: the bottom bar holds Home / Red Carpet / Launch / Furnace / More;
+// "More" opens a sheet with the rest of the sidebar.
+export function toggleMoreSheet() {
+  const sheet = document.getElementById('more-sheet');
+  if (!sheet) return;
+  if (!sheet.hidden) { closeMoreSheet(); return; }
+  const items = [...document.querySelectorAll('#sb .sbi-more')]
+    .map(el => el.classList.contains('sb-sec') ? `<div class="ms-sec">${el.textContent}</div>` : el.outerHTML.replace('sbi sbi-more', 'ms-item'))
+    .join('');
+  sheet.innerHTML = `<div class="ms-backdrop" onclick="closeMoreSheet()"></div><div class="ms-panel">${items}</div>`;
+  sheet.hidden = false;
+}
+export function closeMoreSheet() {
+  const sheet = document.getElementById('more-sheet');
+  if (sheet) { sheet.hidden = true; sheet.innerHTML = ''; }
+}
+
+// Landing-page links and share links: ?launch=1, ?token=<mint>, ?view=<page>
 function handleDeepLink() {
   const params = new URLSearchParams(location.search);
   const mint = params.get('token');
-  if (mint) {
-    // Open straight away — the detail page reads everything it needs from the
-    // chain, so a share link shouldn't wait for the feed to load.
-    if (!getTokens().some(t => t.mint === mint)) {
-      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) { showN('Invalid token link'); return; }
-      mergeIndexedTokens([{ mint, ticker: mint.slice(0, 4).toUpperCase(), name: `Token ${mint.slice(0, 6)}` }]);
-    }
-    const token = getTokens().find(t => t.mint === mint);
-    if (token) openDet(token.id);
+  if (params.get('view') && PAGE_KEYS.includes(params.get('view'))) {
+    setView(params.get('view'));
+  } else if (mint) {
+    // Opens straight away — the detail page reads what it needs from the chain.
+    openToken(mint);
   } else if (params.get('launch') === '1') {
     openLaunch();
   }
@@ -656,6 +682,7 @@ function handleDeepLink() {
 export function init() {
   startSolPrice();
   window.addEventListener('usd:sol-price', () => { renderAll(); });
+  bindPages(document.getElementById('page-view'), openToken);
   renderAll();
   refreshTicker();
   handleDeepLink();
@@ -675,7 +702,7 @@ export function init() {
   window._app = {
     walletClick, disconnectWalletUI, toggleWMenu, closeWMenu, copyAddrUI, openSolscan,
     toggleSb, setView, goProfile,
-    openDet, 
+    openDet, openToken, toggleMoreSheet, closeMoreSheet,
     openEditToken, closeEditToken, saveEditToken,
     openSwap, closeSwap, flipSwap, cswap, doSwap,
     openLaunch, closeLaunch, selMode, selPresaleMode, goStep1, goStep2, goStep2b, goStep3, doLaunch,

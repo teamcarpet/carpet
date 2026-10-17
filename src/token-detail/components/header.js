@@ -4,6 +4,7 @@
 // CARPET (graduated / launched) and how many people are on this page now.
 
 import { esc, safeUrl } from '../../escape.js';
+import { isFavorite, toggleFavorite } from '../../favorites.js';
 
 function shorten(s, n = 4) {
   if (!s || s.length < 12) return s || '';
@@ -87,6 +88,7 @@ export class Header {
             <span class="th-ticker">$${esc(ticker)}</span>
             <button class="th-icon-btn" data-act="copy" title="Copy contract address"><iconify-icon icon="solar:copy-linear"></iconify-icon></button>
             <button class="th-icon-btn" data-act="share" title="Copy link"><iconify-icon icon="solar:share-linear"></iconify-icon></button>
+            <button class="th-icon-btn th-fav ${isFavorite(this.mint) ? 'on' : ''}" data-act="fav" title="Favorite"><iconify-icon icon="${isFavorite(this.mint) ? 'solar:star-bold' : 'solar:star-linear'}"></iconify-icon></button>
           </div>
           <div class="th-row th-meta">
             <span class="th-age" title="Age">${esc(fmtAge(i.createdAt))}</span>
@@ -103,6 +105,7 @@ export class Header {
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const act = btn.dataset.act;
+    if (act === 'fav') { toggleFavorite(this.mint); this._render(); return; }
     const text = act === 'copy' ? this.mint : `${window.location.origin}/app/?token=${this.mint}`;
     navigator.clipboard?.writeText(text).then(() => {
       btn.classList.add('ok');

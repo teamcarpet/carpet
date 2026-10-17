@@ -46,6 +46,8 @@ export const tokensRoutes: FastifyPluginAsync = async (app) => {
         coalesce(ps.price_sol,    0)  AS "priceSol",
         coalesce(ps.market_cap,   0)  AS "marketCap",
         coalesce(ps.progress_pct, 0)  AS prog,
+        coalesce(ps.total_raised_sol, 0) AS "raisedSol",
+        coalesce(ps.migration_target, 0) AS "targetSol",
         coalesce(v."volume24h",   0)  AS "volume24h",
         t.holders                     AS holders,
         coalesce(p."pctChange24h", 0) AS "pctChange24h"
