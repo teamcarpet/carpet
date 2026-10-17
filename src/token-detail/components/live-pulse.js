@@ -14,9 +14,9 @@ import { getBondingPoolPda, getConnection, getReadOnlyProgram, solscanTxUrl } fr
 import { createLiveChart } from '../live/gl-chart.js';
 import { PriceSeries, STEPS } from '../live/series.js';
 import { Odometer } from '../live/odometer.js';
+import { startSolPrice, getSolUsd, fmtUsdCompact, fmtUsdPrice, fmtSolAsUsd } from '../../usd.js';
 
 const TAPE_MAX = 6;
-const SOL_PRICE_URL = 'https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112';
 const TOKEN_INFO_MS = 20_000;
 
 function fmtSol(n) {
@@ -39,14 +39,6 @@ function fmtPrice(n) {
   return `0.0${sub}${digits}`;
 }
 
-function fmtUsd(n) {
-  if (!Number.isFinite(n)) return '';
-  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
-  if (n >= 1) return '$' + n.toFixed(2);
-  return '$' + n.toPrecision(3);
-}
-
 const fmtPct = (n) => `${n >= 0 ? '+' : ''}${(Number.isFinite(n) ? n : 0).toFixed(2)}%`;
 const shortAddr = (s) => (s && s.length > 10 ? `${s.slice(0, 4)}…${s.slice(-4)}` : s || '');
 const fmtClock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -60,7 +52,6 @@ export class LivePulse {
     this.series = new PriceSeries(mint);
     this.stepKey = STEPS[0].key;
     this.tape = [];
-    this.solUsd = null;
     this.supply = null;
     this.decimals = 6;
     this.curve = null;           // { progress, raisedSol, targetSol, migrated }
@@ -103,7 +94,9 @@ export class LivePulse {
       this.el.status.textContent = 'No bonding curve for this token';
     }
     this._refresh();
-    this._loadSolUsd();
+    this.onUsd = () => this._refresh();
+    window.addEventListener('usd:sol-price', this.onUsd);
+    startSolPrice();
     this._loadTokenInfo();
     this.infoTimer = setInterval(() => this._loadTokenInfo(), TOKEN_INFO_MS);
     if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('livedemo')) this._demo();
@@ -196,14 +189,6 @@ export class LivePulse {
     this.demoTimer = setTimeout(tick, 800);
   }
 
-  async _loadSolUsd() {
-    try {
-      const data = await (await fetch(SOL_PRICE_URL)).json();
-      const usd = Number(Object.values(data)[0]?.usdPrice);
-      if (Number.isFinite(usd)) { this.solUsd = usd; this._refresh(); }
-    } catch { /* USD line is optional */ }
-  }
-
   async _loadTokenInfo() {
     try {
       const res = await fetch(`${CONFIG.apiUrl}/token?mint=${this.mint}`);
@@ -260,7 +245,7 @@ export class LivePulse {
     const q = (s) => this.host.querySelector(s);
     this.el = {
       card: q('.lb'), value: q('.lb-value'), change: q('.lb-change'), usd: q('.lb-usd'),
-      when: q('.lb-when'), canvas: q('.lb-canvas'), scrub: q('.lb-scrub'), scrubTime: q('.lb-scrub-time'),
+      when: q('.lb-when'), unit: q('.lb-unit'), canvas: q('.lb-canvas'), scrub: q('.lb-scrub'), scrubTime: q('.lb-scrub-time'),
       fill: q('.lb-progress-fill'), status: q('.lb-status'), tape: q('.lb-tape'), win: q('.lb-win'),
     };
   }
@@ -270,10 +255,20 @@ export class LivePulse {
     if (price == null) return;
     const scale = this._scale();
     const now = Date.now();
-    const shown = this.scrub ? this.scrub.value : price * scale;
+    const shown = this.scrub ? this.scrub.value : price * scale;   // SOL
+    const usd = getSolUsd();
+    const isMcap = this.mode === 'mcap';
 
-    this.odometer.set(this.mode === 'mcap' ? fmtSol(shown) : fmtPrice(shown));
-    this.el.usd.textContent = this.solUsd ? `≈ ${fmtUsd(shown * this.solUsd)}` : '';
+    // Dollars up front like every launchpad; SOL underneath.
+    if (usd) {
+      this.odometer.set(isMcap ? fmtUsdCompact(shown * usd) : fmtUsdPrice(shown * usd));
+      this.el.unit.textContent = '';
+      this.el.usd.textContent = `${isMcap ? fmtSol(shown) : fmtPrice(shown)} SOL`;
+    } else {
+      this.odometer.set(isMcap ? fmtSol(shown) : fmtPrice(shown));
+      this.el.unit.textContent = 'SOL';
+      this.el.usd.textContent = '';
+    }
 
     const { buys, sells, vol, change } = this.series.stats(now);
     const ref = this.series.view(now).ref;
@@ -291,12 +286,12 @@ export class LivePulse {
       this.el.card.classList.add(tradeSide === 'buy' ? 'flash-buy' : 'flash-sell');
     }
 
-    this._setStat('mcap', `${fmtSol(price * (this.supply || 0))} SOL`);
-    this._setStat('price', fmtPrice(price));
-    this._setStat('vol', `${vol.toFixed(2)} SOL`);
+    this._setStat('mcap', fmtSolAsUsd(price * (this.supply || 0)));
+    this._setStat('price', usd ? fmtUsdPrice(price * usd) : `${fmtPrice(price)} SOL`);
+    this._setStat('vol', fmtSolAsUsd(vol));
     this._setStat('flow', `<em class="up">${buys}</em> / <em class="dn">${sells}</em>`, true);
     this._setStat('holders', this.info.holders != null ? String(this.info.holders) : '—');
-    this._setStat('vol24', this.info.volume24h != null ? `${Number(this.info.volume24h).toFixed(2)} SOL` : '—');
+    this._setStat('vol24', this.info.volume24h != null ? fmtSolAsUsd(Number(this.info.volume24h)) : '—');
 
     if (this.curve) {
       this.el.fill.style.width = `${this.curve.progress}%`;
@@ -375,6 +370,7 @@ export class LivePulse {
     clearInterval(this.clockTimer);
     clearInterval(this.infoTimer);
     clearTimeout(this.demoTimer);
+    window.removeEventListener('usd:sol-price', this.onUsd);
     this.chart.destroy();
     this.host.innerHTML = '';
   }

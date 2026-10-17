@@ -125,6 +125,8 @@ function normalizeIndexedToken(existing = {}, indexed = {}) {
     ath: Number(indexed.ath ?? existing.ath ?? 0),
     prog,
     priceSol: Number(indexed.priceSol ?? existing.priceSol ?? 0),
+    // Indexer sends epoch seconds; replaces placeholders from share links.
+    createdAt: indexed.createdAt ? Number(indexed.createdAt) * 1000 : existing.createdAt,
   };
 }
 

@@ -1,3 +1,4 @@
+import { startSolPrice, fmtSolAsUsd } from './usd.js';
 import { esc } from './escape.js';
 import {
   connectWallet, disconnectWallet, isConnected,
@@ -48,7 +49,8 @@ let imageFileGlobal = null;
 let selM = null, presaleM = 0, fData = {};
 
 // ── Formatters ───────────────────────────────────────────────────────────────
-function fm(n) { if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K'; return '$' + n; }
+// Market cap / volume arrive in SOL; show them in dollars like every launchpad.
+const fm = (sol) => fmtSolAsUsd(Number(sol) || 0);
 function fh(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : String(n); }
 function fAge(ts) { const s = (Date.now() - ts) / 1000; if (s < 60) return Math.floor(s) + 's'; if (s < 3600) return Math.floor(s / 60) + 'm'; if (s < 86400) return Math.floor(s / 3600) + 'h'; return Math.floor(s / 86400) + 'd'; }
 
@@ -662,6 +664,8 @@ function handleDeepLink() {
 }
 
 export function init() {
+  startSolPrice();
+  window.addEventListener('usd:sol-price', () => { renderAll(); });
   renderAll();
   refreshTicker();
   handleDeepLink();
