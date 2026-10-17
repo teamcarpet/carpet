@@ -22,11 +22,12 @@ import { fetchTokenInfo }  from './data/token-info-fetcher.js';
 let activeView = null;
 
 class TokenDetailView {
-  constructor(container, { mint, onBack, onTrade }) {
+  constructor(container, { mint, onBack, onTrade, getAllowance }) {
     this.container = container;
     this.mint      = mint;
     this.onBack    = onBack;
     this.onTrade   = onTrade;
+    this.getAllowance = getAllowance;
     this.components = [];
     this._render();
     this._loadData();
@@ -65,7 +66,7 @@ class TokenDetailView {
         mint: this.mint,
         onTrade: (t) => this.trades.pushTrade(t),
       }),
-      this.trade     = new TradePanel(document.getElementById('td-trade-slot'), { mint: this.mint, onTrade: this.onTrade }),
+      this.trade     = new TradePanel(document.getElementById('td-trade-slot'), { mint: this.mint, onTrade: this.onTrade, getAllowance: this.getAllowance }),
       this.chat      = new ChatPanel(document.getElementById('td-chat-slot'),   { mint: this.mint }),
       this.insights  = new InsightsPanel(document.getElementById('td-insights-slot'), {
         mint: this.mint,

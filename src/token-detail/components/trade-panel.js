@@ -5,14 +5,17 @@ import { esc } from '../../escape.js';
 // the module free of wallet/launchpad dependencies.
 
 export class TradePanel {
-  constructor(host, { mint, onTrade }) {
+  constructor(host, { mint, onTrade, getAllowance }) {
     this.host    = host;
     this.mint    = mint;
     this.onTrade = onTrade;
+    this.getAllowance = getAllowance;
+    this.allowance = null;   // { maxBuySol, capReached, tokenBalance, migrating }
     this.side    = 'buy';
     this.amount  = '';
     this.info    = null;
     this._render();
+    this.refreshAllowance();
     this.host.addEventListener('click', (e) => this._onClick(e));
     this.host.addEventListener('input', (e) => this._onInput(e));
   }
@@ -60,6 +63,8 @@ export class TradePanel {
           <button class="td-trade-q" data-act="quick" data-val="max">Max</button>
         </div>
 
+        <div class="td-trade-hint" id="td-trade-hint">${this._hint(isPresale, isBuy)}</div>
+
         <button class="td-trade-submit ${isBuy ? 'buy' : 'sell'}" data-act="submit">
           ${primaryLabel} $${ticker}
         </button>
@@ -90,7 +95,7 @@ export class TradePanel {
     } else if (act === 'quick') {
       const v = t.dataset.val;
       if (v === 'reset') this.amount = '';
-      else if (v === 'max') this.amount = String(this.info?.walletBalanceSol ?? 0);
+      else if (v === 'max') this.amount = this._maxAmount(this.side === 'buy');
       else this.amount = v;
       this.host.querySelector('.td-trade-input').value = this.amount;
     } else if (act === 'submit') {
@@ -111,13 +116,58 @@ export class TradePanel {
   }
 
   _onInput(e) {
-    if (e.target.dataset.act === 'amount') this.amount = e.target.value;
+    if (e.target.dataset.act === 'amount') {
+      this.amount = e.target.value;
+      const isPresale = this.info?.mode === 'presale' && !this.info?.isMigrated;
+      const h = this.host.querySelector('#td-trade-hint');
+      if (h) h.innerHTML = this._hint(isPresale, this.side === 'buy');
+    }
+  }
+
+  // Wallet-specific limits from the chain (1% cap left, token balance).
+  async refreshAllowance() {
+    if (!this.getAllowance) return;
+    try {
+      this.allowance = await this.getAllowance();
+    } catch { this.allowance = null; }
+    const isPresale = this.info?.mode === 'presale' && !this.info?.isMigrated;
+    const h = this.host.querySelector('#td-trade-hint');
+    if (h) h.innerHTML = this._hint(isPresale, this.side === 'buy');
+  }
+
+  _maxAmount(isBuy) {
+    const a = this.allowance;
+    if (!isBuy) return a ? String(a.tokenBalance) : '';
+    const bal = Math.max(0, (this.info?.walletBalanceSol ?? Infinity) - 0.01); // keep SOL for fees
+    const cap = a ? a.maxBuySol : bal;
+    const v = Math.min(cap, bal);
+    return Number.isFinite(v) && v > 0 ? String(Math.floor(v * 1e4) / 1e4) : '';
+  }
+
+  _hint(isPresale, isBuy) {
+    const a = this.allowance;
+    if (isPresale || !a) return '';
+    if (a.migrating) return '<span class="warn">Target reached — moving to Meteora. Trading reopens there shortly.</span>';
+    if (!isBuy) return a.tokenBalance ? `You hold ${a.tokenBalance.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '';
+    if (a.capReached) return '<span class="warn">You’ve reached the 1% per-wallet limit on this token.</span>';
+    const amt = parseFloat(this.amount);
+    const max = a.maxBuySol.toFixed(a.maxBuySol < 1 ? 3 : 2);
+    if (amt > a.maxBuySol * 1.0005) return `<span class="warn">Over the 1% wallet limit — max ${max} SOL right now</span>`;
+    return `You can buy up to ${max} SOL (1% wallet limit)`;
   }
 
   async _submit() {
     const amt = parseFloat(this.amount);
     const isClaim = this.info?.mode === 'presale' && !this.info?.isMigrated && this.side === 'sell';
     if (!isClaim && (!amt || amt <= 0)) return;
+    const a = this.allowance;
+    if (!isClaim && this.side === 'buy' && a && !(this.info?.mode === 'presale' && !this.info?.isMigrated)) {
+      if (a.migrating || a.capReached || amt > a.maxBuySol * 1.0005) {
+        const h = this.host.querySelector('#td-trade-hint');
+        if (h) h.innerHTML = this._hint(false, true);
+        return;
+      }
+    }
     const btn = this.host.querySelector('[data-act="submit"]');
     btn.disabled = true;
     btn.textContent = 'Processing…';
@@ -127,7 +177,9 @@ export class TradePanel {
       console.error('[trade] failed', err);
     } finally {
       btn.disabled = false;
+      this.amount = '';
       this._render();
+      this.refreshAllowance();
     }
   }
 

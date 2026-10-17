@@ -110,6 +110,69 @@ export function quoteSell(pool, config, tokenAmount) {
   return gross - cut(config.devFeeBps) - cut(config.platformFeeBps) - cut(config.sellTaxBps);
 }
 
+// What this wallet can still do on a bonding curve right now:
+//   maxBuyLamports — SOL (incl. 1% fee) that buys exactly up to the 1% wallet
+//                    cap; inverse of the curve: net = vsr·t / (vtr − t)
+//   tokenBalance   — tokens held, for Sell → Max
+export async function getTradeAllowance(owner, mint) {
+  const program = getReadOnlyProgram();
+  const mintPk = pk(mint), ownerPk = pk(owner);
+  const poolPda = getBondingPoolPda(mintPk);
+  const [pool, config, position, ata] = await Promise.all([
+    program.account.bondingCurvePool.fetch(poolPda),
+    program.account.globalConfig.fetch(getConfigPda()),
+    program.account.userPosition.fetchNullable(getPositionPda(poolPda, ownerPk)),
+    getAssociatedTokenAddress(mintPk, ownerPk),
+  ]);
+  const cap = (big(pool.initialRealTokenReserves) * BigInt(pool.maxBuyBps)) / BPS;
+  const bought = position ? big(position.amount) : 0n;
+  let tokensLeft = cap > bought ? cap - bought : 0n;
+  const real = big(pool.realTokenReserves);
+  if (tokensLeft > real) tokensLeft = real;
+  const vsr = big(pool.virtualSolReserves), vtr = big(pool.virtualTokenReserves);
+  let maxBuyLamports = 0n;
+  if (tokensLeft > 0n && vtr > tokensLeft) {
+    const net = (vsr * tokensLeft) / (vtr - tokensLeft);
+    const feeBps = BigInt(config.devFeeBps) + BigInt(config.platformFeeBps);
+    maxBuyLamports = (net * BPS) / (BPS - feeBps);
+  }
+  let tokenBalance = 0;
+  try {
+    const bal = await getConnection().getTokenAccountBalance(ata);
+    tokenBalance = Number(bal.value.uiAmount) || 0;
+  } catch { /* no token account yet */ }
+  return {
+    maxBuySol: Number(maxBuyLamports) / 1e9,
+    capReached: tokensLeft === 0n,
+    tokenBalance,
+    migrating: big(pool.realSolReserves) >= big(pool.migrationTarget),
+  };
+}
+
+// Anchor's raw "AnchorError … Error Code: X" → a sentence a trader understands.
+const FRIENDLY_ERRORS = {
+  ExceedsMaxBuy: 'That buy goes over the 1% per-wallet limit. Lower the amount or press Max.',
+  ExceedsMaxContribution: 'That goes over the 1% per-wallet limit for this presale.',
+  SlippageExceeded: 'Price moved before your trade landed. Try again.',
+  MigrationTargetReached: 'This token hit its target and is moving to Meteora. Trading reopens there in about a minute.',
+  SellsLockedAtTarget: 'This token hit its target and is moving to Meteora. Trading reopens there in about a minute.',
+  InsufficientTokenReserves: 'Not enough tokens left on the curve for that amount.',
+  InsufficientSolReserves: 'The curve can’t pay out that much right now. Try a smaller sell.',
+  PresaleEnded: 'This presale has ended.',
+  TargetReached: 'This presale is already full.',
+  ContributionExceedsTarget: 'That would overfill the presale. Lower the amount.',
+  PlatformPaused: 'Trading is paused right now.',
+  PoolPaused: 'Trading on this token is paused right now.',
+};
+export function friendlyError(err) {
+  const msg = String(err?.message || err || '');
+  const code = msg.match(/Error Code: (\w+)/)?.[1] || err?.error?.errorCode?.code;
+  if (code && FRIENDLY_ERRORS[code]) return FRIENDLY_ERRORS[code];
+  if (/User rejected|rejected the request/i.test(msg)) return 'Cancelled in wallet.';
+  if (/insufficient lamports|Attempt to debit an account but found no record of a prior credit/i.test(msg)) return 'Not enough SOL in your wallet for this trade and fees.';
+  return msg.replace(/^AnchorError[^.]*\.\s*/, '').slice(0, 160);
+}
+
 export function withSlippage(amount, bps = CONFIG.slippageBps) {
   return (big(amount) * (BPS - BigInt(bps))) / BPS;
 }

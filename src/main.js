@@ -16,6 +16,8 @@ import {
   claimCreatorTokens,
   solscanAccountUrl,
   solscanTxUrl,
+  getTradeAllowance,
+  friendlyError,
 } from './launchpad.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
@@ -199,8 +201,13 @@ export function openDet(id) {
         }
         await refreshBalance();
       } catch (err) {
-        showN('Trade failed: ' + err.message);
+        console.error('[trade]', err);
+        showN(friendlyError(err));
       }
+    },
+    getAllowance: async () => {
+      if (!isConnected() || token.mode === 'presale') return null;
+      return getTradeAllowance(getPublicKey(), token.mint);
     },
   });
 }
