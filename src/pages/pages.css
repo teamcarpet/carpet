@@ -338,17 +338,28 @@ button.pf-row:hover { background: var(--bg-3); }
 .up-prev { width: 84px; height: 84px; border-radius: 18px; object-fit: cover; border: 1px solid var(--line-hi); }
 
 /* Preview + success */
-.prev-card { display: flex; gap: 16px; padding: 18px !important; border-radius: 22px !important; border: 1px solid var(--line) !important; background: var(--bg-2) !important; margin-bottom: 6px; }
-.prev-img { width: 84px !important; height: 84px !important; border-radius: 20px !important; overflow: hidden; flex-shrink: 0; border: 0 !important;
-  background: radial-gradient(120% 120% at 20% 15%, #ff6a6a, #7a0d0d 70%, #0b0b0c) !important; }
+.prev-card {
+  display: flex; align-items: flex-start; gap: 18px; width: 100%; max-width: 560px !important; margin: 0 auto 6px !important; padding: 18px !important;
+  border-radius: 22px !important; border: 1px solid var(--line-hi) !important; background: var(--bg-2) !important; overflow: visible !important;
+  box-shadow: 0 0 0 1px rgba(255,45,45,.12), 0 18px 50px rgba(255,45,45,.12) !important;
+}
+.prev-img { width: 88px !important; height: 88px !important; border-radius: 20px !important; overflow: hidden; flex-shrink: 0; border: 0 !important; font-size: 40px !important; }
 .prev-img img { width: 100%; height: 100%; object-fit: cover; }
-.prev-name { font-family: var(--font) !important; font-size: 20px !important; font-weight: 700 !important; letter-spacing: -0.01em !important; color: #fff !important; text-transform: none !important; }
-.prev-tk { font-family: var(--font) !important; font-size: 14px !important; color: var(--muted) !important; letter-spacing: 0 !important; }
-.prev-desc { font-family: var(--font) !important; font-size: 13.5px !important; color: #d0d0d0 !important; letter-spacing: 0 !important; margin: 8px 0 12px !important; }
-.prev-stats { display: flex; gap: 8px !important; }
-.prev-st { padding: 8px 12px !important; border-radius: 12px !important; background: var(--bg-3) !important; border: 1px solid var(--line) !important; }
-.prev-stl { font-family: var(--mono) !important; font-size: 9.5px !important; color: var(--dim) !important; }
-.prev-stv { font-family: var(--font) !important; font-size: 14px !important; font-weight: 600 !important; }
+.prev-body { flex: 1; min-width: 0; padding: 2px 0 0 !important; }
+.prev-name { font-family: var(--font) !important; font-size: 20px !important; font-weight: 700 !important; letter-spacing: -0.01em !important; color: #fff !important; text-transform: none !important; overflow-wrap: anywhere; }
+.prev-tk { font-family: var(--font) !important; font-size: 14px !important; color: var(--muted) !important; letter-spacing: 0 !important; margin-top: 2px !important; }
+.prev-desc { font-family: var(--font) !important; font-size: 13.5px !important; line-height: 1.5 !important; color: #d0d0d0 !important; letter-spacing: 0 !important; margin: 10px 0 0 !important; overflow-wrap: anywhere; }
+.prev-desc:empty { display: none; }
+.prev-stats { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; margin-top: 14px !important; padding-top: 14px !important; border-top: 1px solid var(--line) !important; }
+.prev-st { min-width: 0; text-align: left !important; padding: 9px 12px !important; border-radius: 12px !important; background: var(--bg-3) !important; border: 1px solid var(--line) !important; }
+.prev-st::after { display: none !important; }
+.prev-stl { font-family: var(--mono) !important; font-size: 9.5px !important; letter-spacing: 1.2px !important; color: var(--dim) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px !important; }
+.prev-stv { font-family: var(--font) !important; font-size: 14px !important; font-weight: 600 !important; color: #fff !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prev-stv.up-c { color: var(--up) !important; }
+@media (max-width: 520px) {
+  .prev-card { flex-direction: column; }
+  .prev-img { width: 72px !important; height: 72px !important; }
+}
 .suc-title { font-family: 'Doto', var(--mono) !important; font-weight: 900 !important; font-size: 44px !important; color: #fff !important; letter-spacing: -0.01em !important; text-transform: none !important; }
 .suc-sub { font-family: var(--font) !important; font-size: 15px !important; color: var(--muted) !important; letter-spacing: 0 !important; text-transform: none !important; }
 .suc-link { display: inline-block; margin: 14px 0; font-size: 13px; color: #fff; text-decoration: underline; text-underline-offset: 3px; }
@@ -370,3 +381,18 @@ button.pf-row:hover { background: var(--bg-3); }
 .ov ::-webkit-scrollbar-thumb { background: var(--line-hi) !important; border-radius: 999px; }
 .ov ::-webkit-scrollbar-track { background: transparent !important; }
 .mcls iconify-icon { font-size: 18px !important; }
+
+/* Toast (showN): floating pill instead of a full-width red bar */
+#nbar {
+  position: fixed !important; left: 50% !important; bottom: 28px !important; top: auto !important; transform: translateX(-50%); z-index: 1000;
+  max-width: min(520px, calc(100vw - 32px)); width: max-content; padding: 12px 20px !important; border-radius: 999px !important;
+  background: #fff !important; color: #000 !important; font-family: var(--font) !important; font-size: 14px !important; font-weight: 500 !important;
+  letter-spacing: 0 !important; text-transform: none !important; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.2);
+  animation: nbarIn .22s var(--ease);
+}
+@keyframes nbarIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 768px) { #nbar { bottom: calc(84px + env(safe-area-inset-bottom)) !important; } }
+.feed-empty { padding: 28px 16px; text-align: center; font-family: var(--font); font-size: 14px; color: var(--muted); }
+.feed-empty b { display: block; margin-bottom: 4px; font-size: 15px; font-weight: 600; color: #fff; }
+.feed-empty button { margin-top: 14px; height: 38px; padding: 0 18px; border: 0; border-radius: 999px; background: #fff; color: #000; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; }
+#c-trk .feed-empty { flex: 1; min-width: 100%; padding: 36px 16px; border: 1px dashed var(--line-hi); border-radius: 18px; }

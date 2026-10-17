@@ -225,7 +225,7 @@ window.addEventListener('platform:token-updated', refreshTicker);
 function buildCrs() {
   const all = getTokens();
   const top = [...all].sort((a, b) => (b.vol || 0) - (a.vol || 0)).slice(0, 10);
-  if (!top.length) { document.getElementById('c-trk').innerHTML = '<div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px;">No tokens yet — launch the first one!</div>'; return; }
+  if (!top.length) { document.getElementById('c-trk').innerHTML = '<div class="feed-empty"><b>Nothing trending yet</b>Be the first to walk the red carpet.<br><button onclick="openLaunch()">+ Launch a token</button></div>'; return; }
   document.getElementById('c-trk').innerHTML = top.map((t, i) => {
     const k = t.col === 'migrated' ? 'migrated' : t.mode === 'presale' ? 'presale' : 'bonding';
     const prog = Math.min(100, Number(t.prog) || 0);
@@ -296,7 +296,7 @@ function renderCol(col) {
   let list = getTokens().filter(t => t.col === col);
   if (searchQ) list = list.filter(t => (t.n || '').toLowerCase().includes(searchQ) || (t.tk || '').toLowerCase().includes(searchQ));
   list = sortTokens(list, colSort[col]);
-  document.getElementById('col-' + col).innerHTML = list.length ? list.map(buildRow).join('') : `<div style="padding:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);">No tokens in this column</div>`;
+  document.getElementById('col-' + col).innerHTML = list.length ? list.map(buildRow).join('') : `<div class="feed-empty">${{ new: 'New launches show up here.', bonding: 'Tokens past 50% of their curve.', migrated: 'Tokens that graduated to Meteora.' }[col] || 'Nothing here yet.'}</div>`;
   document.getElementById('cnt-' + col).textContent = list.length;
 }
 export function renderAll() {
