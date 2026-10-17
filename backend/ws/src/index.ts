@@ -25,6 +25,16 @@ const env = loadEnv(z.object({
 
 // ── HTTP server: health + WS upgrade routing ─────────────────────────────
 const httpServer = http.createServer((req, res) => {
+  if (req.url?.startsWith('/watchers?')) {
+    const mint = new URL(req.url, 'http://localhost').searchParams.get('mint') ?? '';
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-store',
+    });
+    res.end(JSON.stringify({ mint, watchers: connections.watchers(mint) }));
+    return;
+  }
   if (req.url === '/health' || req.url?.startsWith('/health?')) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, ts: Date.now(), connections: connections.size }));

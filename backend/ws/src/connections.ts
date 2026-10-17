@@ -57,6 +57,9 @@ export class ConnectionManager {
 
   get size(): number { return this.byId.size; }
 
+  /** Open token pages for a mint (each page holds one trade stream). */
+  watchers(mint: string): number { return this.tradeSubs.get(mint)?.size ?? 0; }
+
   all(): WebSocket[] {
     return Array.from(this.byId.values()).map(c => c.socket);
   }

@@ -10,10 +10,8 @@
 <title>CARPET — Launchpad</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/src/bubble/bubble.css">
 <link rel="stylesheet" href="/src/token-detail/token-detail.css">
 <link rel="stylesheet" href="/mobile-css/mobile-main.css">
-<link rel="stylesheet" href="/mobile-css/mobile-bubble.css">
 <link rel="stylesheet" href="/mobile-css/mobile-token-detail.css">
 <style>
 /* ── Mobile footer clearance fix ──
@@ -52,7 +50,6 @@
 #footer .foot-tagline { font-size: 12px !important; }
 </style>
 <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -493,7 +490,6 @@ body{background:#000;background-image:none}
   </div>
   <nav class="sb-nav">
     <div class="sbi on" id="si-home" onclick="setView('home')"><div class="sbi-ico"><iconify-icon icon="solar:home-2-bold"></iconify-icon></div><div class="sbi-lbl">Home</div></div>
-    <div class="sbi" id="si-bubble" onclick="setView('bubble')"><div class="sbi-ico"><iconify-icon icon="solar:atom-bold"></iconify-icon></div><div class="sbi-lbl">Bubble Map</div></div>
     <div class="sbi" id="si-profile" onclick="setView('profile')"><div class="sbi-ico"><iconify-icon icon="solar:user-rounded-bold"></iconify-icon></div><div class="sbi-lbl">Profile</div></div>
   </nav>
   <div class="sb-foot">
@@ -619,7 +615,6 @@ body{background:#000;background-image:none}
   </div>
 
   <!-- BUBBLE MAP VIEW -->
-   <div id="bubble-view" style="display:none;"></div>
   
   <!-- PROFILE VIEW -->
   <div id="profile-view" style="display:none;flex-direction:column;padding-bottom:40px;"></div>

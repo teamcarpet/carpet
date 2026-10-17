@@ -33,7 +33,6 @@ import {
      initProfile,
    } from './profile.js';
 
-import { mountBubbleView, unmountBubbleView } from './bubble/bubble.js';
 
 import { mountTokenDetail, unmountTokenDetail } from './token-detail/token-detail.js';
    
@@ -131,20 +130,13 @@ export function setView(v) {
   // Also unmount the token detail to clean up its WS / fetchers
   try { unmountTokenDetail(); } catch {}
 
-  ['home', 'bubble', 'profile'].forEach(id => {
+  ['home', 'profile'].forEach(id => {
     const el = document.getElementById(id + '-view');
     if (el) el.style.display = id === v ? 'flex' : 'none';
     const sbi = document.getElementById('si-' + id);
     if (sbi) sbi.classList.toggle('on', id === v);
   });
   if (v === 'home') setTimeout(updCrs, 60);
-   if (v === 'bubble') {
-    mountBubbleView(document.getElementById('bubble-view'));
-  } else {
-    // Only unmount if we're actually leaving bubble
-    const bv = document.getElementById('bubble-view');
-    if (bv && bv.classList.contains('bm-root')) unmountBubbleView();
-  }
   if (v === 'profile') renderProfile();
 }
 export function goProfile() { setView('profile'); closeWMenu(); }
@@ -162,7 +154,7 @@ export function openDet(id) {
     return;
   }
   // Show the mount container, hide other views.
-  ['home', 'bubble', 'profile'].forEach(v => {
+  ['home', 'profile'].forEach(v => {
     const el = document.getElementById(v + '-view');
     if (el) el.style.display = 'none';
   });
@@ -643,7 +635,7 @@ async function syncIndexedTokens() {
 }
 window.addEventListener('platform:tokens-synced', () => { renderAll(); refreshTicker(); });
 
-// Landing-page links and share links: ?launch=1, ?view=bubble, ?token=<mint>
+// Landing-page links and share links: ?launch=1, ?token=<mint>
 function handleDeepLink() {
   const params = new URLSearchParams(location.search);
   const mint = params.get('token');
@@ -658,8 +650,6 @@ function handleDeepLink() {
     if (token) openDet(token.id);
   } else if (params.get('launch') === '1') {
     openLaunch();
-  } else if (params.get('view') === 'bubble') {
-    setView('bubble');
   }
 }
 
