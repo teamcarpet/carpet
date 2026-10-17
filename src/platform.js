@@ -2,16 +2,27 @@
 // Replace with a real API/DB backend for production multi-user deployment.
 
 import { isBase58Address, safeUrl } from './escape.js';
+import { CONFIG } from './config.js';
 
-const TOKENS_KEY  = 'carpet_tokens';
-const LIVES_KEY   = 'carpet_lives';
-const REWARDS_KEY = 'carpet_rewards';
+// Cached tokens belong to one launchpad program. Keys carry its address so a
+// redeploy to a new program never shows pools that don't exist on it.
+const NS = CONFIG.LAUNCHPAD.programId;
+const TOKENS_KEY  = `carpet_tokens:${NS}`;
+const LIVES_KEY   = `carpet_lives:${NS}`;
+const REWARDS_KEY = `carpet_rewards:${NS}`;
+
+try {
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const k = localStorage.key(i);
+    if (/^carpet_(tokens|lives|rewards)(:|$)/.test(k) && !k.endsWith(`:${NS}`)) localStorage.removeItem(k);
+  }
+} catch {}
 
 function read(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
 function write(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
 }
 
 // ── Tokens ──────────────────────────────────────────────────────────────────

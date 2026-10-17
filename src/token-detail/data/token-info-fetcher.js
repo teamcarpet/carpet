@@ -77,7 +77,7 @@ function normalizeTokenInfo(base, data) {
 // We keep it inline to avoid a circular import.
 function allTokens() {
   try {
-    const raw = localStorage.getItem('carpet_tokens') || '[]';
+    const raw = localStorage.getItem(`carpet_tokens:${CONFIG.LAUNCHPAD.programId}`) || '[]';
     return JSON.parse(raw);
   } catch {
     return [];
