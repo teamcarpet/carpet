@@ -23,6 +23,7 @@ import { tokensRoutes }  from './routes/tokens.js';
 import { candlesRoutes } from './routes/candles.js';
 import { tradesRoutes }  from './routes/trades.js';
 import { statsRoutes }   from './routes/stats.js';
+import { seriesRoutes }  from './routes/series.js';
 
 const env = loadEnv(z.object({
   API_PORT:             z.coerce.number().int().positive().default(3000),
@@ -61,6 +62,7 @@ await app.register(tokensRoutes);
 await app.register(candlesRoutes);
 await app.register(tradesRoutes);
 await app.register(statsRoutes);
+await app.register(seriesRoutes);
 
 // ── Boot ─────────────────────────────────────────────────────────────────
 try {
