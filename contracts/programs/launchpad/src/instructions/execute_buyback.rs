@@ -204,6 +204,16 @@ pub fn handle_execute_buyback(
         )?
     };
 
+    // The vault is a plain system account: it must end a round either empty or
+    // rent-exempt. If a round would strand less than the rent minimum, spend
+    // the remainder now instead of leaving it unspendable.
+    let rent_min = Rent::get()?.minimum_balance(0);
+    let left_after = buyback.treasury_balance.saturating_sub(sol_to_spend);
+    let sol_to_spend = if left_after > 0 && left_after < rent_min {
+        buyback.treasury_balance
+    } else {
+        sol_to_spend
+    };
     require!(sol_to_spend > 0, LaunchpadError::InsufficientTreasury);
 
     validate_buyback_accounts(

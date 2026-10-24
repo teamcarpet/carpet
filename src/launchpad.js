@@ -114,9 +114,10 @@ export function quoteSell(pool, config, tokenAmount) {
 //   maxBuyLamports — SOL (incl. 1% fee) that buys exactly up to the 1% wallet
 //                    cap; inverse of the curve: net = vsr·t / (vtr − t)
 //   tokenBalance   — tokens held, for Sell → Max
-export async function getTradeAllowance(owner, mint) {
+export async function getTradeAllowance(owner, mint, mode = 'bonding') {
   const program = getReadOnlyProgram();
   const mintPk = pk(mint), ownerPk = pk(owner);
+  if (mode === 'presale') return getPresaleStatus(ownerPk, mintPk);
   const poolPda = getBondingPoolPda(mintPk);
   const [pool, config, position, ata] = await Promise.all([
     program.account.bondingCurvePool.fetch(poolPda),
@@ -124,6 +125,11 @@ export async function getTradeAllowance(owner, mint) {
     program.account.userPosition.fetchNullable(getPositionPda(poolPda, ownerPk)),
     getAssociatedTokenAddress(mintPk, ownerPk),
   ]);
+  if (pool.isMigrated) {
+    let tokenBalance = 0;
+    try { tokenBalance = Number((await getConnection().getTokenAccountBalance(ata)).value.uiAmount) || 0; } catch {}
+    return { migrated: true, tokenBalance };
+  }
   const cap = (big(pool.initialRealTokenReserves) * BigInt(pool.maxBuyBps)) / BPS;
   const bought = position ? big(position.amount) : 0n;
   let tokensLeft = cap > bought ? cap - bought : 0n;
@@ -149,6 +155,54 @@ export async function getTradeAllowance(owner, mint) {
   };
 }
 
+// Presale state for this wallet: what the trade panel can offer right now.
+async function getPresaleStatus(ownerPk, mintPk) {
+  const program = getReadOnlyProgram();
+  const poolPda = getPresalePoolPda(mintPk);
+  const [pool, position] = await Promise.all([
+    program.account.presalePool.fetch(poolPda),
+    program.account.userPosition.fetchNullable(getPositionPda(poolPda, ownerPk)),
+  ]);
+  const now = Math.floor(Date.now() / 1000);
+  const raised = big(pool.currentRaised), target = big(pool.migrationTarget);
+  const contributed = position ? Number(big(position.amount)) / 1e9 : 0;
+  const ended = now > Number(pool.endTime);
+  const filled = raised >= target;
+  const cap = (target * BigInt(pool.maxBuyBps)) / BPS;
+  const mine = position ? big(position.amount) : 0n;
+  const left = target > raised ? target - raised : 0n;
+  let room = cap > mine ? cap - mine : 0n;
+  if (room > left) room = left;
+  const feeBps = 100n; // presale entry fee (config.presalePlatformFeeBps)
+  return {
+    presale: true,
+    migrated: pool.isMigrated,
+    ended, filled, contributed,
+    maxBuySol: Number((room * BPS) / (BPS - feeBps)) / 1e9,
+    canRefund: ended && !filled && !pool.isMigrated && contributed > 0 && !position?.refundClaimed,
+    canClaim: pool.isMigrated && contributed > 0 && !position?.tokensClaimed,
+    claimed: !!position?.tokensClaimed,
+    refunded: !!position?.refundClaimed,
+  };
+}
+
+export async function refundPresale(wallet, mint) {
+  const program = getProgram(wallet);
+  const mintPk = pk(mint);
+  const poolPda = getPresalePoolPda(mintPk);
+  return program.methods
+    .refundPresale()
+    .accounts({
+      user: wallet.publicKey,
+      config: getConfigPda(),
+      pool: poolPda,
+      userPosition: getPositionPda(poolPda, wallet.publicKey),
+      solVault: getPresaleSolVaultPda(mintPk),
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+}
+
 // Anchor's raw "AnchorError … Error Code: X" → a sentence a trader understands.
 const FRIENDLY_ERRORS = {
   ExceedsMaxBuy: 'That buy goes over the 1% per-wallet limit. Lower the amount or press Max.',
@@ -163,6 +217,12 @@ const FRIENDLY_ERRORS = {
   ContributionExceedsTarget: 'That would overfill the presale. Lower the amount.',
   PlatformPaused: 'Trading is paused right now.',
   PoolPaused: 'Trading on this token is paused right now.',
+  NothingToClaim: 'Nothing to claim yet — creator tokens unlock gradually over 30 days.',
+  AlreadyClaimed: 'You already claimed your tokens.',
+  AlreadyRefunded: 'You already took your refund.',
+  PresaleNotEnded: 'Refunds open when the presale ends.',
+  NotMigrated: 'Tokens can be claimed once the presale graduates.',
+  AlreadyMigrated: 'This token has graduated — it now trades on Meteora.',
 };
 export function friendlyError(err) {
   const msg = String(err?.message || err || '');

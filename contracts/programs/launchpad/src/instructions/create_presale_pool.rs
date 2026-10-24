@@ -100,7 +100,11 @@ pub fn handle_create_presale_pool(
 
     // Validate end_time is in the future
     let now = Clock::get()?.unix_timestamp;
-    require!(params.end_time > now, LaunchpadError::InvalidEndTime);
+    require!(
+        params.end_time >= now + PresalePool::MIN_DURATION_SECONDS
+            && params.end_time <= now + PresalePool::MAX_DURATION_SECONDS,
+        LaunchpadError::InvalidEndTime
+    );
 
     let creator_pool_bps = params.creator_pool_bps.unwrap_or(2000);
     require!(creator_pool_bps <= 5000, LaunchpadError::InvalidPoolParams); // max 50%

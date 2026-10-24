@@ -81,6 +81,17 @@ pub fn handle_create_bonding_pool(
     ctx: Context<CreateBondingPool>,
     params: CreateBondingPoolParams,
 ) -> Result<()> {
+    // Every public launch uses the same curve (30 SOL virtual, 1B supply,
+    // 100 SOL target) so buyers can compare tokens like for like. Only the
+    // admin may pass custom parameters, for devnet testing.
+    let custom = params.token_supply.is_some()
+        || params.virtual_sol_reserves.is_some()
+        || params.virtual_token_reserves.is_some()
+        || params.migration_target.is_some();
+    require!(
+        !custom || ctx.accounts.creator.key() == ctx.accounts.config.admin,
+        LaunchpadError::InvalidPoolParams
+    );
     let token_supply = params.token_supply.unwrap_or(DEFAULT_TOKEN_SUPPLY);
     let virtual_sol = params.virtual_sol_reserves.unwrap_or(DEFAULT_VIRTUAL_SOL);
     let virtual_tokens = params.virtual_token_reserves.unwrap_or(token_supply);

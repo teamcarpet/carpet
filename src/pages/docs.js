@@ -264,6 +264,7 @@ const DOCS = [
         ['Graduation target', '100 SOL raised in the curve'],
         ['Max per wallet', '1% of supply, cumulative'],
         ['Creator pre-mine', 'None — the creator buys on the curve like everyone else'],
+        ['Curve parameters', 'Identical for every launch — no custom curves'],
       ])}
       <h3>How a launch works</h3>
       ${steps([
@@ -276,7 +277,7 @@ const DOCS = [
       <p>A presale collects SOL up to a target before any trading starts. Everyone who joins gets tokens at the same price, pro-rata to what they put in.</p>
       ${table(['Parameter', 'Value'], [
         ['Raise target', '100 – 10,000 SOL'],
-        ['Duration', 'Set by the creator (24 hours by default)'],
+        ['Duration', '10 minutes – 7 days, set by the creator (24 hours by default)'],
         ['Max per wallet', '1% of the target'],
         ['Entry fee', '1% of each contribution'],
         ['Creator allocation', '0 – 50% of supply (20% default), vesting linearly over 30 days from graduation'],

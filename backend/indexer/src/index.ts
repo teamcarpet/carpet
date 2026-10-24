@@ -24,6 +24,7 @@ import { startRpcSource } from './rpc-source.js';
 import { startMetadataRefresher } from './metadata.js';
 import { startHolderRefresher } from './holders.js';
 import { refreshAllCandles, startAggregator } from './aggregator.js';
+import { startMeteoraPriceRefresher } from './meteora-price.js';
 
 const bool = z.preprocess(v => {
   if (typeof v === 'boolean') return v;
@@ -95,6 +96,7 @@ if (env.MOCK_MODE) {
   }
   startMetadataRefresher(ctx.connection);
   startHolderRefresher(ctx.connection);
+  startMeteoraPriceRefresher(ctx.connection);
 
   caughtUp.then(async () => {
     ready = true;

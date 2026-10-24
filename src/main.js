@@ -14,6 +14,7 @@ import {
   contributePresale,
   claimPresale,
   claimCreatorTokens,
+  refundPresale,
   solscanAccountUrl,
   solscanTxUrl,
   getTradeAllowance,
@@ -175,7 +176,7 @@ export function openDet(id) {
       container.style.display = 'none';
       setView('home');
     },
-    onTrade: async ({ mint, side, amount }) => {
+    onTrade: async ({ mint, side, amount, migrated }) => {
       if (!isConnected()) {
         showN('Connect wallet first');
         return;
@@ -185,6 +186,13 @@ export function openDet(id) {
         if (side === 'claimPresale') {
           const sig = await claimPresale(wallet, mint);
           showTxN('Presale claim confirmed', sig);
+        } else if (side === 'refundPresale') {
+          const sig = await refundPresale(wallet, mint);
+          showTxN('Refund confirmed', sig);
+        } else if (migrated) {
+          const { swapMeteora } = await import('./meteora-swap.js');
+          const sig = await swapMeteora({ mint, mode: token.mode, side, amount, decimals: token.decimals || 6 });
+          showTxN(side === 'buy' ? 'Buy confirmed' : 'Sell confirmed', sig);
         } else if (token.mode === 'presale' && token.col !== 'migrated') {
           const lamports = Math.floor(amount * LAMPORTS_PER_SOL);
           const sig = await contributePresale(wallet, mint, lamports);
@@ -206,8 +214,9 @@ export function openDet(id) {
       }
     },
     getAllowance: async () => {
-      if (!isConnected() || token.mode === 'presale') return null;
-      return getTradeAllowance(getPublicKey(), token.mint);
+      if (!isConnected()) return null;
+      const a = await getTradeAllowance(getPublicKey(), token.mint, token.mode === 'presale' ? 'presale' : 'bonding');
+      return a && { ...a, walletBalanceSol: getBalance() };
     },
   });
 }

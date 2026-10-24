@@ -95,6 +95,10 @@ impl PresalePool {
     /// Creator token allocation vests linearly over 30 days from graduation
     /// (end_time is set to the migration timestamp).
     pub const CREATOR_VESTING_SECONDS: i64 = 30 * 24 * 60 * 60;
+    /// Longest a presale may run. Contributors can only refund after the end,
+    /// so an open-ended presale would lock their SOL indefinitely.
+    pub const MAX_DURATION_SECONDS: i64 = 7 * 24 * 60 * 60;
+    pub const MIN_DURATION_SECONDS: i64 = 10 * 60;
 }
 
 /// Creator tokens unlocked `now`, linear from `start` over the vesting period.
